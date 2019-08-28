@@ -1506,6 +1506,13 @@ fi
 %doc %{_docdir}/kamailio/modules/README.topos
 %doc %{_docdir}/kamailio/modules/README.cfgt
 
+%doc %{_docdir}/kamailio/modules/README.kemix
+%doc %{_docdir}/kamailio/modules/README.lost
+%doc %{_docdir}/kamailio/modules/README.xhttp_prom
+%{_libdir}/kamailio/modules/kemix.so
+%{_libdir}/kamailio/modules/lost.so
+%{_libdir}/kamailio/modules/xhttp_prom.so
+
 %dir %attr(-,kamailio,kamailio) %{_sysconfdir}/kamailio
 %config(noreplace) %{_sysconfdir}/kamailio/dictionary.kamailio
 %config(noreplace) %{_sysconfdir}/kamailio/kamailio.cfg
@@ -1875,7 +1882,9 @@ fi
 %files      lua
 %defattr(-,root,root)
 %doc %{_docdir}/kamailio/modules/README.app_lua
+%doc %{_docdir}/kamailio/modules/README.app_lua_sr
 %{_libdir}/kamailio/modules/app_lua.so
+%{_libdir}/kamailio/modules/app_lua_sr.so
 %endif
 
 
