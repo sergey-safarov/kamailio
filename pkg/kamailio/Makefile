@@ -45,7 +45,7 @@ src.rpm: tar
             -e 's/setup -n %{name}-%{ver}/setup -n kamailio-$(RELEASE)/' \
             -i obs/kamailio.spec
 	rpmbuild ${RPMBUILD_OPT} -bs obs/kamailio.spec
-	mv ${RPMBUILD_TOP}/SRPMS/kamailio-$(RELEASE)*.src.rpm ../..
+	mv ${RPMBUILD_TOP}/SRPMS/kamailio-${RPM_VER}*.src.rpm ../..
 	rm -Rf ${RPMBUILD_TOP}
 
 # build rpm packages
