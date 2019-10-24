@@ -7,6 +7,7 @@
 %define dist_version %{?fedora}
 %bcond_without cnxcc
 %bcond_with dnssec
+%bcond_without evapi
 %bcond_without geoip
 %bcond_without http_async_client
 %bcond_without ims
@@ -32,6 +33,7 @@
 %define dist_version %{?centos}
 %bcond_with cnxcc
 %bcond_without dnssec
+%bcond_without evapi
 %bcond_without geoip
 %bcond_without http_async_client
 %bcond_without ims
@@ -55,6 +57,7 @@
 %define dist .el7.centos
 %bcond_without cnxcc
 %bcond_with dnssec
+%bcond_without evapi
 %bcond_without geoip
 %bcond_without http_async_client
 %bcond_without ims
@@ -77,6 +80,7 @@
 %define dist_version %{?suse_version}
 %bcond_without cnxcc
 %bcond_with dnssec
+%bcond_with evapi
 %bcond_without geoip
 %bcond_without http_async_client
 %bcond_without ims
@@ -99,6 +103,7 @@
 %define dist_version %{?rhel}
 %bcond_with cnxcc
 %bcond_without dnssec
+%bcond_without evapi
 %bcond_with geoip
 %bcond_with http_async_client
 %bcond_with ims
@@ -121,6 +126,7 @@
 %define dist_version %{?rhel}
 %bcond_with cnxcc
 %bcond_with dnssec
+%bcond_without evapi
 %bcond_with geoip
 %bcond_with http_async_client
 %bcond_with ims
@@ -348,6 +354,21 @@ BuildRequires:  dnssec-tools-libs-devel
 
 %description    dnssec
 DNSSEC support for Kamailio.
+%endif
+
+
+%if %{with evapi}
+%package    evapi
+Summary:    Module can be used to create an event message flow from Kamailio to any application that can connect to a TCP socket
+Group:      %{PKGGROUP}
+Requires:   libev, kamailio = %ver
+BuildRequires:  libev-devel
+
+%description    evapi
+The remote application can also issue messages received by Kamailio.
+There is no protocol definition, it is all up to the author of the routing script.
+Events can be generated for any event in Kamailio. For 3rd party transaction control, a transaction can be automatically
+suspended when sending the event, to be resumed at a later point, maybe triggered by an incoming message on the event socket.
 %endif
 
 
@@ -964,6 +985,9 @@ make every-module skip_modules="app_mono db_cassandra db_oracle iptrtpproxy \
 %if %{with dnssec}
     kdnssec \
 %endif
+%if %{with evapi}
+    kev \
+%endif
 %if %{with geoip}
     kgeoip \
 %endif
@@ -1037,6 +1061,9 @@ make install-modules-all skip_modules="app_mono db_cassandra db_oracle \
     kcpl \
 %if %{with dnssec}
     kdnssec \
+%endif
+%if %{with evapi}
+    kev \
 %endif
 %if %{with geoip}
     kgeoip \
@@ -1550,6 +1577,14 @@ fi
 %defattr(-,root,root)
 %doc %{_docdir}/kamailio/modules/README.dnssec
 %{_libdir}/kamailio/modules/dnssec.so
+%endif
+
+
+%if %{with evapi}
+%files      evapi
+%defattr(-,root,root)
+%doc %{_docdir}/kamailio/modules/README.evapi
+%{_libdir}/kamailio/modules/evapi.so
 %endif
 
 
