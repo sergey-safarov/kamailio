@@ -28,9 +28,15 @@
 %bcond_without xmlrpc
 %endif
 
-%if 0%{?centos_ver} == 6
+%if 0%{?rhel} == 6
+%if 0%{?centos_ver}
 %define dist_name centos
 %define dist_version %{?centos}
+%endif
+%if 0%{?centos_ver} == 0
+%define dist_name rhel
+%define dist_version %{?rhel}
+%endif
 %bcond_with cnxcc
 %bcond_without dnssec
 %bcond_without evapi
@@ -153,32 +159,6 @@
 %bcond_without ruby
 %bcond_without sctp
 %bcond_without websocket
-%bcond_without xmlrpc
-%endif
-
-%if 0%{?rhel} == 6 && 0%{?centos_ver} != 6
-%define dist_name rhel
-%define dist_version %{?rhel}
-%bcond_with cnxcc
-%bcond_without dnssec
-%bcond_without evapi
-%bcond_with geoip
-%bcond_with http_async_client
-%bcond_with ims
-%bcond_with jansson
-%bcond_with json
-%bcond_with lua
-%bcond_with kazoo
-%bcond_with memcached
-%bcond_with mongodb
-%bcond_with perl
-%bcond_with phonenum
-%bcond_with python3
-%bcond_with rabbitmq
-%bcond_with redis
-%bcond_with ruby
-%bcond_with sctp
-%bcond_with websocket
 %bcond_without xmlrpc
 %endif
 
