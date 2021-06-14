@@ -81,8 +81,7 @@
 %bcond_without xmlrpc
 %endif
 
-%if 0%{?centos_ver} == 8 || 0%{?almalinux_ver} == 8 || 0%{?rocky_ver} == 8
-%define rhel_rebuild 8
+%if 0%{?rhel} == 8
 %if 0%{?centos_ver}
 %define dist_name centos
 %define dist_version %{?centos}
@@ -97,6 +96,10 @@
 %define dist_name centos
 %define dist_version %{?rocky}
 %define dist .el8.rocky
+%endif
+%if 0%{?centos_ver} == 0 && 0%{?almalinux_ver} == 0 && 0%{?rocky_ver} == 0
+%define dist_name rhel
+%define dist_version %{?rhel}
 %endif
 %bcond_without cnxcc
 %bcond_with dnssec
@@ -174,32 +177,6 @@
 %endif
 
 %if 0%{?rhel} == 7 && 0%{?centos_ver} != 7
-%define dist_name rhel
-%define dist_version %{?rhel}
-%bcond_without cnxcc
-%bcond_with dnssec
-%bcond_without evapi
-%bcond_without geoip
-%bcond_without http_async_client
-%bcond_without ims
-%bcond_without jansson
-%bcond_without json
-%bcond_without lua
-%bcond_without kazoo
-%bcond_without memcached
-%bcond_without mongodb
-%bcond_without perl
-%bcond_without phonenum
-%bcond_without python3
-%bcond_without rabbitmq
-%bcond_without redis
-%bcond_without ruby
-%bcond_without sctp
-%bcond_without websocket
-%bcond_without xmlrpc
-%endif
-
-%if 0%{?rhel} == 8 && 0%{?rhel_rebuild} != 8
 %define dist_name rhel
 %define dist_version %{?rhel}
 %bcond_without cnxcc
