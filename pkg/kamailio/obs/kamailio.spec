@@ -83,17 +83,17 @@
 
 %if 0%{?centos_ver} == 8 || 0%{?almalinux_ver} == 8 || 0%{?rocky_ver} == 8
 %define rhel_rebuild 8
-% if 0%{?centos_ver}
+%if 0%{?centos_ver}
 %define dist_name centos
 %define dist_version %{?centos}
 %define dist .el8.centos
 %endif
-% if 0%{?almalinux_ver}
+%if 0%{?almalinux_ver}
 %define dist_name centos
 %define dist_version %{?almalinux}
 %define dist .el8.almalinux
 %endif
-% if 0%{?rocky_ver}
+%if 0%{?rocky_ver}
 %define dist_name centos
 %define dist_version %{?rocky}
 %define dist .el8.rocky
