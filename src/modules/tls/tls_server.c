@@ -452,7 +452,7 @@ int tls_accept(struct tcp_connection *c, int *error)
 		BUG("Invalid connection state %d (bug in TLS code)\n", tls_c->state);
 		goto err;
 	}
-
+	set_keylog_callback(ssl);
 	tls_openssl_clear_errors();
 	ret = SSL_accept(ssl);
 	if(unlikely(ret == 1)) {
