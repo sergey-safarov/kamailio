@@ -970,6 +970,23 @@ int lost_function(struct sip_msg *_m, char *_con, char *_uri, char *_name,
 				LM_DBG("geolocation header field (LbR): %s\n", geoval);
 
 				break;
+			case CID_HTTPS_HTTP: /* type: 4 */
+				/* prefer cid */
+				geoval = lost_get_geoheader_value(geolist, CID, &geotype);
+				/* fallback to https */
+				if(geoval == NULL) {
+					LM_WARN("no valid cid ... trying https\n");
+					geoval = lost_get_geoheader_value(geolist, HTTPS, &geotype);
+				}
+				/* fallback to http */
+				if(geoval == NULL) {
+					LM_WARN("no valid https URL ... trying http\n");
+					geoval = lost_get_geoheader_value(geolist, HTTP, &geotype);
+				}
+
+				LM_DBG("geolocation header field (LbR): %s\n", geoval);
+
+				break;
 			default:
 				LM_WARN("unknown module parameter value\n");
 				geoval = lost_get_geoheader_value(geolist, UNKNOWN, &geotype);
