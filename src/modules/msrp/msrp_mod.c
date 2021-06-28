@@ -50,6 +50,7 @@ static int  child_init(int);
 static void mod_destroy(void);
 
 static int w_msrp_relay(sip_msg_t* msg, char* str1, char* str2);
+static int w_msrp_relay2(sip_msg_t* msg, char* to_uris, char* from_uris);
 static int w_msrp_reply2(sip_msg_t* msg, char* code, char* text);
 static int w_msrp_reply3(sip_msg_t* msg, char* code, char* text, char* hdrs);
 static int w_msrp_is_request(sip_msg_t* msg, char* str1, char* str2);
@@ -91,6 +92,8 @@ static pv_export_t mod_pvs[] = {
 static cmd_export_t cmds[]={
 	{"msrp_relay", (cmd_function)w_msrp_relay, 0, 0,
 		0, ANY_ROUTE},
+	{"msrp_relay2", (cmd_function)w_msrp_relay2, 2, 0,
+		0, ANY_ROUTE},
 	{"msrp_reply", (cmd_function)w_msrp_reply2, 2, fixup_spve_spve,
 		0, ANY_ROUTE},
 	{"msrp_reply", (cmd_function)w_msrp_reply3, 3, fixup_spve_all,
@@ -100,6 +103,10 @@ static cmd_export_t cmds[]={
 	{"msrp_is_reply",    (cmd_function)w_msrp_is_reply, 0, 0,
 		0, ANY_ROUTE},
 	{"msrp_set_dst",     (cmd_function)w_msrp_set_dst, 2, fixup_spve_all,
+		0, ANY_ROUTE},
+	{"msrp_proxy_save",   (cmd_function)w_msrp_cmap_save, 0, 0,
+		0, ANY_ROUTE},
+	{"msrp_proxy_lookup", (cmd_function)w_msrp_cmap_lookup, 0, 0,
 		0, ANY_ROUTE},
 	{"msrp_relay_flags", (cmd_function)w_msrp_relay_flags, 1, fixup_igp_null,
 		0, ANY_ROUTE},
@@ -232,6 +239,28 @@ static int ki_msrp_relay(sip_msg_t* msg)
 static int w_msrp_relay(sip_msg_t* msg, char* str1, char* str2)
 {
 	return ki_msrp_relay(msg);
+}
+
+/**
+ *
+ */
+static int ki_msrp_relay2(sip_msg_t* msg, char* to_uris, char* from_uris)
+{
+	msrp_frame_t *mf;
+	int ret;
+
+	mf = msrp_get_current_frame();
+	if(mf==NULL)
+		return -1;
+
+	ret = msrp_relay2(mf, to_uris, from_uris);
+	if(ret==0) ret = 1;
+	return ret;
+}
+
+static int w_msrp_relay2(sip_msg_t* msg, char* to_uris, char* from_uris)
+{
+	return ki_msrp_relay2(msg, to_uris, from_uris);
 }
 
 /**

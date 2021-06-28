@@ -190,6 +190,119 @@ done:
 	return 0;
 }
 
+int msrp_relay2(msrp_frame_t *mf, char* to_uris, char* from_uris)
+{
+	struct dest_info *dst;
+	struct tcp_connection *con = NULL;
+	char reqbuf[MSRP_MAX_FRAME_SIZE];
+	msrp_hdr_t *tpath;
+	msrp_hdr_t *fpath;
+	msrp_env_t *env;
+	char *p;
+	int port;
+	sr_event_param_t evp = {0};
+	int ret;
+
+	if(mf->buf.len>=MSRP_MAX_FRAME_SIZE-1)
+		return -1;
+
+	tpath = msrp_get_hdr_by_id(mf, MSRP_HDR_TO_PATH);
+	if(tpath==NULL)
+	{
+		LM_ERR("To-Path header not found\n");
+		return -1;
+	}
+	fpath = msrp_get_hdr_by_id(mf, MSRP_HDR_FROM_PATH);
+	if(fpath==NULL)
+	{
+		LM_ERR("From-Path header not found\n");
+		return -1;
+	}
+
+	p = reqbuf;
+
+	memcpy(p, mf->buf.s, tpath->body.s - mf->buf.s);
+	p += tpath->body.s - mf->buf.s;
+
+	memcpy(p, to_uris, strlen(to_uris));
+	p += strlen(to_uris);
+
+	memcpy(p, "\r\n", 2);
+	p += 2;
+
+	memcpy(p, "From-Path: ", 11);
+	p += 11;
+
+	memcpy(p, from_uris, strlen(from_uris));
+	p += strlen(from_uris);
+
+	memcpy(p, fpath->body.s + fpath->body.len, mf->buf.s + mf->buf.len - fpath->body.s - fpath->body.len);
+	p += mf->buf.s + mf->buf.len - fpath->body.s - fpath->body.len;
+
+	env = msrp_get_env();
+	if (env->envflags&MSRP_ENV_DSTINFO)
+	{
+		dst = &env->dstinfo;
+		goto done;
+	} else
+	{
+		LM_ERR("error required call msrp_set_dst before relay message\n");
+		return -1;
+	}
+done:
+	if (dst->send_flags.f & SND_F_FORCE_CON_REUSE)
+	{
+		port = su_getport(&dst->to);
+		if (likely(port))
+		{
+			ticks_t con_lifetime;
+			struct ip_addr ip;
+
+			con_lifetime = cfg_get(tcp, tcp_cfg, con_lifetime);
+			su2ip_addr(&ip, &dst->to);
+			con = tcpconn_get(dst->id, &ip, port, NULL, con_lifetime);
+		}
+		else if (likely(dst->id))
+		{
+			con = tcpconn_get(dst->id, 0, 0, 0, 0);
+		}
+
+		if (con == NULL)
+		{
+			LM_WARN("TCP/TLS connection not found\n");
+			return -1;
+		}
+
+		if (unlikely((con->rcv.proto == PROTO_WS || con->rcv.proto == PROTO_WSS)
+				&& sr_event_enabled(SREV_TCP_WS_FRAME_OUT))) {
+			ws_event_info_t wsev;
+
+			memset(&wsev, 0, sizeof(ws_event_info_t));
+			wsev.type = SREV_TCP_WS_FRAME_OUT;
+			wsev.buf = reqbuf;
+			wsev.len = p - reqbuf;
+			wsev.id = con->id;
+			evp.data = (void *)&wsev;
+			ret = sr_event_exec(SREV_TCP_WS_FRAME_OUT, &evp);
+			tcpconn_put(con);
+			return ret;
+		}
+		else if (tcp_send(dst, 0, reqbuf, p - reqbuf) < 0) {
+			LM_ERR("forwarding frame failed\n");
+			tcpconn_put(con);
+			return -1;
+		}
+
+		tcpconn_put(con);
+	}
+	else if (tcp_send(dst, 0, reqbuf, p - reqbuf) < 0) {
+			LM_ERR("forwarding frame failed\n");
+			return -1;
+	}
+
+	return 0;
+}
+
 /**
  *
  */
