@@ -118,6 +118,7 @@ typedef enum lost_geotype
 	CID,		 /* content-indirection */
 	HTTP,		 /* http uri */
 	HTTPS,		 /* https uri */
+	CID_HTTPS_HTTP,	 /* content-indirection first, then https uri and then http uri */
 	UNKNOWN = -1 /* unknown */
 } lost_geotype_t;
 
