@@ -320,6 +320,7 @@ static int tls_complete_init(struct tcp_connection* c)
 
 	/* link the extra data struct inside ssl connection*/
 	SSL_set_app_data(data->ssl, data);
+	set_keylog_callback(data->ssl);
 	return 0;
 
 error:
@@ -465,6 +466,7 @@ int tls_accept(struct tcp_connection *c, int* error)
 	if (pkey)
 		SSL_use_PrivateKey(ssl, pkey);
 #endif
+	set_keylog_callback(ssl);
 	ret = SSL_accept(ssl);
 	if (unlikely(ret == 1)) {
 		DBG("TLS accept successful\n");
