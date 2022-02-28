@@ -1032,7 +1032,7 @@ int tcpconn_read_haproxy(struct tcp_connection *c) {
 						dst_ip->af = AF_INET6;
 						dst_ip->len = 16;
 						memcpy(dst_ip->u.addr,
-							hdr.v2.addr.ip6.src_addr, 16);
+							hdr.v2.addr.ip6.dst_addr, 16);
 						c->rcv.dst_port =
 							hdr.v2.addr.ip6.dst_port;
 
