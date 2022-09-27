@@ -208,8 +208,11 @@ static int w_redis_cmd3(struct sip_msg* msg, char* ssrv, char* scmd,
 		return -1;
 	}
 
-	if(redisc_exec(&s[0], &s[2], &s[1])<0)
+    if(redisc_exec(&s[0], &s[2], &s[1])<0) {
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 		return -1;
+    }
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 	return 1;
 }
 
@@ -246,9 +249,11 @@ static int w_redis_cmd4(struct sip_msg* msg, char* ssrv, char* scmd,
 
 	STR_VTOZ(arg1.s[arg1.len], c1);
 	if(redisc_exec(&s[0], &s[2], &s[1], arg1.s)<0) {
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 		STR_ZTOV(arg1.s[arg1.len], c1);
 		return -1;
 	}
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 	STR_ZTOV(arg1.s[arg1.len], c1);
 	return 1;
 }
@@ -292,10 +297,12 @@ static int w_redis_cmd5(struct sip_msg* msg, char* ssrv, char* scmd,
 	STR_VTOZ(arg1.s[arg1.len], c1);
 	STR_VTOZ(arg2.s[arg2.len], c2);
 	if(redisc_exec(&s[0], &s[2], &s[1], arg1.s, arg2.s)<0) {
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 		STR_ZTOV(arg1.s[arg1.len], c1);
 		STR_ZTOV(arg2.s[arg2.len], c2);
 		return -1;
 	}
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 	STR_ZTOV(arg1.s[arg1.len], c1);
 	STR_ZTOV(arg2.s[arg2.len], c2);
 	return 1;
@@ -346,11 +353,13 @@ static int w_redis_cmd6(struct sip_msg* msg, char* ssrv, char* scmd,
 	STR_VTOZ(arg2.s[arg2.len], c2);
 	STR_VTOZ(arg3.s[arg3.len], c3);
 	if(redisc_exec(&s[0], &s[2], &s[1], arg1.s, arg2.s, arg3.s)<0) {
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 		STR_ZTOV(arg1.s[arg1.len], c1);
 		STR_ZTOV(arg2.s[arg2.len], c2);
 		STR_ZTOV(arg3.s[arg3.len], c3);
 		return -1;
 	}
+LM_INFO("redisc_exec res: %s\n", &s[2]);
 	STR_ZTOV(arg1.s[arg1.len], c1);
 	STR_ZTOV(arg2.s[arg2.len], c2);
 	STR_ZTOV(arg3.s[arg3.len], c3);

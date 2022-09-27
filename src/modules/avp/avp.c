@@ -233,15 +233,18 @@ static int set_iattr(struct sip_msg* msg, char* p1, char* p2)
 		return -1;
 	}
 
+LOG(L_INFO, "set_iattr: AVP p1='%s'; p2='%s'\n", p1 ? ((fparam_t*)p1)->orig : "null", p2 ? ((fparam_t*)p2)->orig : "null");
+
 	if (get_int_fparam(&value.n, msg, (fparam_t*)p2) < 0) {
 		ERR("Error while obtaining attribute value from '%s'\n", ((fparam_t*)p1)->orig);
 		return -1;
 	}
-
+LOG(L_INFO, "set_iattr: AVP value='%d'\n", value.n);
 	if (add_avp(avpid.flags | AVP_NAME_STR, avpid.name, value) != 0) {
 		ERR("add_avp failed\n");
 		return -1;
 	}
+LOG(L_INFO, "set_iattr: AVP avpid.name='%s'\n", avpid.name.s);
 	return 1;
 }
 
@@ -254,17 +257,17 @@ static int set_sattr(struct sip_msg* msg, char* p1, char* p2)
 	if (get_avp_id(&avpid, (fparam_t*)p1, msg) < 0) {
 		return -1;
 	}
-
+LOG(L_INFO, "set_sattr: AVP p1='%s'; p2='%s'\n", p1 ? ((fparam_t*)p1)->orig : "null", p2 ? ((fparam_t*)p2)->orig : "null");
 	if (get_str_fparam(&value.s, msg, (fparam_t*)p2) < 0) {
 		ERR("Error while obtaining attribute value from '%s'\n", ((fparam_t*)p2)->orig);
 		return -1;
 	}
-
+LOG(L_INFO, "set_sattr: AVP value='%d'\n", value.n);
 	if (add_avp(avpid.flags | AVP_NAME_STR | AVP_VAL_STR, avpid.name, value) != 0) {
 		ERR("add_avp failed\n");
 		return -1;
 	}
-
+LOG(L_INFO, "set_sattr: AVP avpid.name='%s'\n", avpid.name.s);
 	return 1;
 }
 
