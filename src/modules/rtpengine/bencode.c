@@ -6,11 +6,6 @@
 #include <assert.h>
 #include <string.h>
 
-#if defined(__clang__) || defined (__GNUC__)
-# define ATTRIBUTE_NO_SANITIZE_ADDRESS __attribute__((no_sanitize_address))
-#else
-# define ATTRIBUTE_NO_SANITIZE_ADDRESS
-#endif
 
 /* set to 0 for alloc debugging, e.g. through valgrind */
 #define BENCODE_MIN_BUFFER_PIECE_LEN	512
@@ -145,7 +140,6 @@ void bencode_buffer_free(bencode_buffer_t *buf) {
 	}
 }
 
-__attribute__((no_sanitize_address))
 static bencode_item_t *__bencode_item_alloc(bencode_buffer_t *buf, unsigned int payload) {
 	bencode_item_t *ret;
 
