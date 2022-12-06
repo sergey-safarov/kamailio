@@ -42,7 +42,7 @@ src.rpm: tar
 	mv ../../kamailio-$(RELEASE)_src.tar.gz ${RPMBUILD_TOP}/SOURCES/${DIST_ARCHIVE}
 	git log -n 10 > ${RPMBUILD_TOP}/SOURCES/kamailio_version
 	sed -e 's/%define ver .*/%define ver ${RPM_VER}/' \
-            -e 's/%define rel .*/%define rel ${RPM_REL}0%{dist}/' \
+            -e 's/%define rel .*/%define rel ${RPM_REL}4%{dist}/' \
             -e 's/setup -n %{name}-%{ver}/setup -n kamailio-$(RELEASE)/' \
             -i obs/kamailio.spec
 	rpmbuild ${RPMBUILD_OPT} -bs obs/kamailio.spec
