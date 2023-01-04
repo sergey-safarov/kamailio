@@ -100,6 +100,10 @@ static int w_prom_histogram_observe_l2(
 		struct sip_msg *msg, char *pname, char *pnumber, char *l1, char *l2);
 static int w_prom_histogram_observe_l3(struct sip_msg *msg, char *pname,
 		char *pnumber, char *l1, char *l2, char *l3);
+static int w_prom_metric_set_timeout_l0(struct sip_msg* msg, char *pname, char *timeout);
+static int w_prom_metric_set_timeout_l1(struct sip_msg* msg, char *pname, char *timeout, char *l1);
+static int w_prom_metric_set_timeout_l2(struct sip_msg* msg, char *pname, char *timeout, char *l1, char *l2);
+static int w_prom_metric_set_timeout_l3(struct sip_msg* msg, char *pname, char *timeout, char *l1, char *l2, char *l3);
 static int fixup_metric_reset(void **param, int param_no);
 static int fixup_counter_inc(void **param, int param_no);
 
@@ -180,6 +184,14 @@ static cmd_export_t cmds[] = {{"prom_check_uri", (cmd_function)w_prom_check_uri,
 		{"prom_histogram_observe", (cmd_function)w_prom_histogram_observe_l2, 4,
 				fixup_metric_reset, 0, ANY_ROUTE},
 		{"prom_histogram_observe", (cmd_function)w_prom_histogram_observe_l3, 5,
+				fixup_metric_reset, 0, ANY_ROUTE},
+		{"prom_metric_set_timeout", (cmd_function)w_prom_metric_set_timeout_l0, 2,
+				fixup_metric_reset, 0, ANY_ROUTE},
+		{"prom_metric_set_timeout", (cmd_function)w_prom_metric_set_timeout_l1, 3,
+				fixup_metric_reset, 0, ANY_ROUTE},
+		{"prom_metric_set_timeout", (cmd_function)w_prom_metric_set_timeout_l2, 4,
+				fixup_metric_reset, 0, ANY_ROUTE},
+		{"prom_metric_set_timeout", (cmd_function)w_prom_metric_set_timeout_l3, 5,
 				fixup_metric_reset, 0, ANY_ROUTE},
 		{0, 0, 0, 0, 0, 0}};
 
@@ -1665,6 +1677,160 @@ static int ki_xhttp_prom_histogram_observe_l3(struct sip_msg *msg, str *s_name,
 }
 
 /**
+ * @brief Set timeout for metric.
+ */
+static int ki_xhttp_prom_metric_set_timeout_l0(struct sip_msg* msg, str *s_name, str *s_timeout)
+{
+	if (s_name == NULL || s_name->s == NULL || s_name->len == 0) {
+		LM_ERR("Invalid name string\n");
+		return -1;
+	}
+
+	if (s_timeout == NULL || s_timeout->s == NULL || s_timeout->len == 0) {
+		LM_ERR("Invalid timeout string\n");
+		return -1;
+	}
+
+	int timeout;
+	if (int_parse_str(s_timeout, &timeout)) {
+		LM_ERR("Cannot parse integer\n");
+		return -1;
+	}
+
+	if (prom_metric_set_timeout(s_name, (unsigned int)timeout, NULL, NULL, NULL)) {
+		LM_ERR("Cannot set timeout: %d for metric : %.*s\n",
+			   timeout, s_name->len, s_name->s);
+		return -1;
+	}
+
+	LM_DBG("Timeout %d is set for metric %.*s\n", timeout, s_name->len, s_name->s);
+	return 1;
+}
+
+/**
+ * @brief Set timeout for metric (1 labels).
+ */
+static int ki_xhttp_prom_metric_set_timeout_l1(struct sip_msg* msg, str *s_name, str *s_timeout, str *l1)
+{
+	if (s_name == NULL || s_name->s == NULL || s_name->len == 0) {
+		LM_ERR("Invalid name string\n");
+		return -1;
+	}
+
+	if (s_timeout == NULL || s_timeout->s == NULL || s_timeout->len == 0) {
+		LM_ERR("Invalid timeout string\n");
+		return -1;
+	}
+
+	int timeout;
+	if (int_parse_str(s_timeout, &timeout)) {
+		LM_ERR("Cannot parse integer\n");
+		return -1;
+	}
+
+	if (l1 == NULL || l1->s == NULL || l1->len == 0) {
+		LM_ERR("Invalid l1 string\n");
+		return -1;
+	}
+
+	if (prom_metric_set_timeout(s_name, (unsigned int)timeout, l1, NULL, NULL)) {
+		LM_ERR("Cannot set timeout: %d for metric : %.*s (%.*s)\n",
+			   timeout, s_name->len, s_name->s, l1->len, l1->s);
+		return -1;
+	}
+
+	LM_DBG("Timeout %d is set for metric %.*s (%.*s)\n", timeout, s_name->len, s_name->s, l1->len, l1->s);
+	return 1;
+}
+
+/**
+ * @brief Set timeout for metric (2 labels).
+ */
+static int ki_xhttp_prom_metric_set_timeout_l2(struct sip_msg* msg, str *s_name, str *s_timeout, str *l1, str *l2)
+{
+	if (s_name == NULL || s_name->s == NULL || s_name->len == 0) {
+		LM_ERR("Invalid name string\n");
+		return -1;
+	}
+
+	if (s_timeout == NULL || s_timeout->s == NULL || s_timeout->len == 0) {
+		LM_ERR("Invalid timeout string\n");
+		return -1;
+	}
+
+	int timeout;
+	if (int_parse_str(s_timeout, &timeout)) {
+		LM_ERR("Cannot parse integer\n");
+		return -1;
+	}
+
+	if (l1 == NULL || l1->s == NULL || l1->len == 0) {
+		LM_ERR("Invalid l1 string\n");
+		return -1;
+	}
+
+	if (l2 == NULL || l2->s == NULL || l2->len == 0) {
+		LM_ERR("Invalid l2 string\n");
+		return -1;
+	}
+
+	if (prom_metric_set_timeout(s_name, (unsigned int)timeout, l1, l2, NULL)) {
+		LM_ERR("Cannot set timeout: %d for metric : %.*s (%.*s, %.*s)\n",
+			   timeout, s_name->len, s_name->s, l1->len, l1->s, l2->len, l2->s);
+		return -1;
+	}
+
+	LM_DBG("Timeout %d is set for metric %.*s (%.*s, %.*s)\n", timeout, s_name->len, s_name->s, l1->len, l1->s, l2->len, l2->s);
+	return 1;
+}
+
+/**
+ * @brief Set timeout for metric (3 labels).
+ */
+static int ki_xhttp_prom_metric_set_timeout_l3(struct sip_msg* msg, str *s_name, str *s_timeout, str *l1, str *l2, str *l3)
+{
+	if (s_name == NULL || s_name->s == NULL || s_name->len == 0) {
+		LM_ERR("Invalid name string\n");
+		return -1;
+	}
+
+	if (s_timeout == NULL || s_timeout->s == NULL || s_timeout->len == 0) {
+		LM_ERR("Invalid timeout string\n");
+		return -1;
+	}
+
+	int timeout;
+	if (int_parse_str(s_timeout, &timeout)) {
+		LM_ERR("Cannot parse integer\n");
+		return -1;
+	}
+
+	if (l1 == NULL || l1->s == NULL || l1->len == 0) {
+		LM_ERR("Invalid l1 string\n");
+		return -1;
+	}
+
+	if (l2 == NULL || l2->s == NULL || l2->len == 0) {
+		LM_ERR("Invalid l2 string\n");
+		return -1;
+	}
+
+	if (l3 == NULL || l3->s == NULL || l3->len == 0) {
+		LM_ERR("Invalid l3 string\n");
+		return -1;
+	}
+
+	if (prom_metric_set_timeout(s_name, (unsigned int)timeout, l1, l2, l3)) {
+		LM_ERR("Cannot set timeout: %d for metric : %.*s (%.*s, %.*s, %.*s)\n",
+			   timeout, s_name->len, s_name->s, l1->len, l1->s, l2->len, l2->s, l3->len, l3->s);
+		return -1;
+	}
+
+	LM_DBG("Timeout %d is set for metric %.*s (%.*s, %.*s, %.*s)\n", timeout, s_name->len, s_name->s, l1->len, l1->s, l2->len, l2->s, l3->len, l3->s);
+	return 1;
+}
+
+/**
  * @brief Observe function for a histogram.
  */
 static int w_prom_histogram_observe(struct sip_msg *msg, char *pname,
@@ -1791,6 +1957,125 @@ static int w_prom_histogram_observe_l3(struct sip_msg *msg, char *pname,
 }
 
 /**
+ * @brief Set timeout for metric
+ */
+static int w_prom_metric_set_timeout(struct sip_msg* msg, char *pname, char* ptimeout, char *l1, char *l2, char *l3)
+{
+	str s_timeout;
+	str s_name;
+
+	if (pname == NULL) {
+		LM_ERR("Invalid parameters\n");
+		return -1;
+	}
+
+	if (get_str_fparam(&s_name, msg, (gparam_t*)pname)!=0) {
+		LM_ERR("No metric name\n");
+		return -1;
+	}
+	if (s_name.s == NULL || s_name.len == 0) {
+		LM_ERR("Invalid name string\n");
+		return -1;
+	}
+
+	if (get_str_fparam(&s_timeout, msg, (gparam_t*)ptimeout)!=0) {
+		LM_ERR("No timeout for metric\n");
+		return -1;
+	}
+	if (s_timeout.s == NULL || s_timeout.len == 0) {
+		LM_ERR("Invalid timeout string\n");
+		return -1;
+	}
+
+	int timeout;
+	if (int_parse_str(&s_timeout, &timeout)) {
+		LM_ERR("Cannot parse integer\n");
+		return -1;
+	}
+
+	str l1_str, l2_str, l3_str;
+	if (l1 != NULL) {
+		if (get_str_fparam(&l1_str, msg, (gparam_t*)l1)!=0) {
+			LM_ERR("No label l1 in metric\n");
+			return -1;
+		}
+		if (l1_str.s == NULL || l1_str.len == 0) {
+			LM_ERR("Invalid l1 string\n");
+			return -1;
+		}
+
+		if (l2 != NULL) {
+			if (get_str_fparam(&l2_str, msg, (gparam_t*)l2)!=0) {
+				LM_ERR("No label l2 in metric\n");
+				return -1;
+			}
+			if (l2_str.s == NULL || l2_str.len == 0) {
+				LM_ERR("Invalid l2 string\n");
+				return -1;
+			}
+
+			if (l3 != NULL) {
+				if (get_str_fparam(&l3_str, msg, (gparam_t*)l3)!=0) {
+					LM_ERR("No label l3 in metric\n");
+					return -1;
+				}
+				if (l3_str.s == NULL || l3_str.len == 0) {
+					LM_ERR("Invalid l3 string\n");
+					return -1;
+				}
+			} /* if l3 != NULL */
+
+		} else {
+			l3 = NULL;
+		} /* if l2 != NULL */
+
+	} else {
+		l2 = NULL;
+		l3 = NULL;
+	} /* if l1 != NULL */
+
+	if (prom_metric_set_timeout(&s_name, (unsigned int)timeout, (l1!=NULL)?&l1_str:NULL, (l2!=NULL)?&l2_str:NULL, (l3!=NULL)?&l3_str:NULL)) {
+		LM_ERR("Cannot set timeout: %d for metric : %.*s\n", timeout, s_name.len, s_name.s);
+		return -1;
+	}
+
+	LM_DBG("Timeout %d is set for metric %.*s\n", timeout, s_name.len, s_name.s);
+	return 1;
+}
+
+/**
+ * @brief Set timeout for metric
+ */
+static int w_prom_metric_set_timeout_l0(struct sip_msg* msg, char *pname, char* ptimeout)
+{
+	return w_prom_metric_set_timeout(msg, pname, ptimeout, NULL, NULL, NULL);
+}
+
+/**
+ * @brief Set timeout for metric (1 labels)
+ */
+static int w_prom_metric_set_timeout_l1(struct sip_msg* msg, char *pname, char* ptimeout, char *l1)
+{
+	return w_prom_metric_set_timeout(msg, pname, ptimeout, l1, NULL, NULL);
+}
+
+/**
+ * @brief Set timeout for metric (2 labels)
+ */
+static int w_prom_metric_set_timeout_l2(struct sip_msg* msg, char *pname, char* ptimeout, char *l1, char *l2)
+{
+	return w_prom_metric_set_timeout(msg, pname, ptimeout, l1, l2, NULL);
+}
+
+/**
+ * @brief Set timeout for metric (3 labels)
+ */
+static int w_prom_metric_set_timeout_l3(struct sip_msg* msg, char *pname, char* ptimeout, char *l1, char *l2, char *l3)
+{
+	return w_prom_metric_set_timeout(msg, pname, ptimeout, l1, l2, l3);
+}
+
+/**
  *
  */
 /* clang-format off */
@@ -1806,106 +2091,125 @@ static sr_kemi_t sr_kemi_xhttp_prom_exports[] = {
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_reset_l0"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l0,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l0,
 		{ SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_reset_l1"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l1,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l1,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_reset_l2"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l2,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l2,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_reset_l3"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l3,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_reset_l3,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_reset_l0"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l0,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l0,
 		{ SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_reset_l1"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l1,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l1,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_reset_l2"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l2,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l2,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_reset_l3"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l3,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_reset_l3,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_inc_l0"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l0,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l0,
 		{ SR_KEMIP_STR, SR_KEMIP_INT, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_inc_l1"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l1,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l1,
 		{ SR_KEMIP_STR, SR_KEMIP_INT, SR_KEMIP_STR,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_inc_l2"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l2,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l2,
 		{ SR_KEMIP_STR, SR_KEMIP_INT, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("counter_inc_l3"),
-	    SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l3,
+		SR_KEMIP_INT, ki_xhttp_prom_counter_inc_l3,
 		{ SR_KEMIP_STR, SR_KEMIP_INT, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_set_l0"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l0,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l0,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_set_l1"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l1,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l1,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_set_l2"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l2,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l2,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("gauge_set_l3"),
-	    SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l3,
+		SR_KEMIP_INT, ki_xhttp_prom_gauge_set_l3,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("histogram_observe_l0"),
-	    SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l0,
+		SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l0,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("histogram_observe_l1"),
-	    SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l1,
+		SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l1,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("histogram_observe_l2"),
-	    SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l2,
+		SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l2,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},
 	{ str_init("xhttp_prom"), str_init("histogram_observe_l3"),
-	    SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l3,
+		SR_KEMIP_INT, ki_xhttp_prom_histogram_observe_l3,
 		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
 			SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE }
 	},
-
+	{ str_init("xhttp_prom"), str_init("metric_set_timeout_l0"),
+		SR_KEMIP_INT, ki_xhttp_prom_metric_set_timeout_l0,
+		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("xhttp_prom"), str_init("metric_set_timeout_l1"),
+		SR_KEMIP_INT, ki_xhttp_prom_metric_set_timeout_l1,
+		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("xhttp_prom"), str_init("metric_set_timeout_l2"),
+		SR_KEMIP_INT, ki_xhttp_prom_metric_set_timeout_l2,
+		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
+			SR_KEMIP_STR, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("xhttp_prom"), str_init("metric_set_timeout_l3"),
+		SR_KEMIP_INT, ki_xhttp_prom_metric_set_timeout_l3,
+		{ SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_STR,
+			SR_KEMIP_STR, SR_KEMIP_STR, SR_KEMIP_NONE }
+	},
 	{ {0, 0}, {0, 0}, 0, NULL, { 0, 0, 0, 0, 0, 0 } }
 };
 /* clang-format on */
@@ -2346,8 +2650,102 @@ clean:
 	return;
 }
 
+static void rpc_prom_metric_set_timeout(rpc_t *rpc, void *ct)
+{
+	str s_name;
+
+	if (rpc->scan(ct, "S", &s_name) < 1) {
+		rpc->fault(ct, 400, "required metric identifier");
+		return;
+	}
+
+	if (s_name.len == 0 || s_name.s == NULL) {
+		rpc->fault(ct, 400, "invalid metric identifier");
+		return;
+	}
+
+	int timeout;
+	if (rpc->scan(ct, "d", &timeout) < 1) {
+		rpc->fault(ct, 400, "required timeout argument");
+		return;
+	}
+
+	str l1, l2, l3;
+	int res;
+	res = rpc->scan(ct, "*SSS", &l1, &l2, &l3);
+	if (res == 0) {
+		/* No labels */
+		if (prom_metric_set_timeout(&s_name, timeout, NULL, NULL, NULL)) {
+			LM_ERR("Cannot assign %d to metric %.*s\n", timeout, s_name.len, s_name.s);
+			rpc->fault(ct, 500, "Failed to assign timeout=%d to metric: %.*s", timeout,
+					   s_name.len, s_name.s);
+			return;
+		}
+		LM_DBG("Assigned timeout=%d to metric (%.*s)\n", timeout, s_name.len, s_name.s);
+
+	} else if (res == 1) {
+		if (prom_metric_set_timeout(&s_name, timeout, &l1, NULL, NULL)) {
+			LM_ERR("Cannot assign timeout=%d to metric: %.*s (%.*s)\n", timeout, s_name.len, s_name.s,
+				   l1.len, l1.s);
+			rpc->fault(ct, 500, "Failed to assign timeout=%d to metric: %.*s (%.*s)",
+					   timeout, s_name.len, s_name.s,
+					   l1.len, l1.s);
+			return;
+		}
+		LM_DBG("Assigned timeout=%d to metric: %.*s (%.*s)\n", timeout, s_name.len, s_name.s,
+			   l1.len, l1.s);
+
+	} else if (res == 2) {
+		if (prom_metric_set_timeout(&s_name, timeout, &l1, &l2, NULL)) {
+			LM_ERR("Cannot assign timeout=%d to metric: %.*s (%.*s, %.*s)\n", timeout,
+				   s_name.len, s_name.s,
+				   l1.len, l1.s,
+				   l2.len, l2.s);
+			rpc->fault(ct, 500, "Failed to assign timeout=%d to metric: %.*s (%.*s, %.*s)",
+					   timeout, s_name.len, s_name.s,
+					   l1.len, l1.s,
+					   l2.len, l2.s
+				);
+			return;
+		}
+		LM_DBG("Assigned timeout=%d to metric: %.*s (%.*s, %.*s)\n", timeout, s_name.len, s_name.s,
+			   l1.len, l1.s,
+			   l2.len, l2.s);
+
+	} else if (res == 3) {
+		if (prom_metric_set_timeout(&s_name, timeout, &l1, &l2, &l3)) {
+			LM_ERR("Cannot assign timeout=%d to metric: %.*s (%.*s, %.*s, %.*s)\n",
+				   timeout, s_name.len, s_name.s,
+				   l1.len, l1.s,
+				   l2.len, l2.s,
+				   l3.len, l3.s
+				);
+			rpc->fault(ct, 500, "Failed to assign timeout=%d to metric: %.*s (%.*s, %.*s, %.*s)",
+					   timeout, s_name.len, s_name.s,
+					   l1.len, l1.s,
+					   l2.len, l2.s,
+					   l3.len, l3.s
+				);
+			return;
+		}
+		LM_DBG("Assigned timeout=%d to metric: %.*s (%.*s, %.*s, %.*s)\n",
+			   timeout, s_name.len, s_name.s,
+			   l1.len, l1.s,
+			   l2.len, l2.s,
+			   l3.len, l3.s
+			);
+
+	} else {
+		LM_ERR("Strange return value: %d\n", res);
+		rpc->fault(ct, 500, "Strange return value: %d", res);
+
+	} /* if res == 0 */
+
+	return;
+}
+
 static const char *rpc_prom_counter_reset_doc[2] = {
-		"Reset a counter based on its identifier", 0};
+                "Reset a counter based on its identifier", 0};
 
 static const char *rpc_prom_counter_inc_doc[2] = {
 		"Add a number (greater or equal to zero) to a counter based on its "
@@ -2366,6 +2764,11 @@ static const char *rpc_prom_histogram_observe_doc[2] = {
 static const char *rpc_prom_metric_list_print_doc[2] = {
 		"Print a list showing all user defined metrics", 0};
 
+static const char* rpc_prom_metric_set_timeout_doc[2] = {
+	"Set metric timeout",
+	0
+};
+
 static rpc_export_t rpc_cmds[] = {
 		{"xhttp_prom.counter_reset", rpc_prom_counter_reset,
 				rpc_prom_counter_reset_doc, 0},
@@ -2378,4 +2781,6 @@ static rpc_export_t rpc_cmds[] = {
 				rpc_prom_histogram_observe_doc, 0},
 		{"xhttp_prom.metric_list_print", rpc_prom_metric_list_print,
 				rpc_prom_metric_list_print_doc, 0},
+		{"xhttp_prom.metric_set_timeout", rpc_prom_metric_set_timeout,
+				rpc_prom_metric_set_timeout_doc, 0},
 		{0, 0, 0, 0}};

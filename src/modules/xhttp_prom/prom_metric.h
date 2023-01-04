@@ -86,6 +86,11 @@ int prom_counter_inc(str *s_name, int number, str *l1, str *l2, str *l3);
 int prom_gauge_set(str *s_name, double number, str *l1, str *l2, str *l3);
 
 /**
+ * @brief Set a timeout for metric.
+ */
+int prom_metric_set_timeout(str *s_name, unsigned int _timeout_minutes, str *l1, str *l2, str *l3);
+
+/**
  * @brief Observe a value in a histogram.
  *
  * @param number value to observe.
@@ -103,5 +108,16 @@ int prom_histogram_observe(
  * On error value pointed by pnumber is undefined.
  */
 int double_parse_str(str *s_number, double *pnumber);
+
+/**
+ * @brief Parse a string and convert to integer.
+ *
+ * @param s_number pointer to number string.
+ * @param pnumber integer passed as reference.
+ *
+ * @return 0 on success.
+ * On error value pointed by pnumber is undefined.
+ */
+int int_parse_str(str *s_number, int *pnumber);
 
 #endif // _PROM_METRIC_H_

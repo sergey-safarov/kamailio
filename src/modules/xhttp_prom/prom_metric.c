@@ -92,6 +92,7 @@ typedef struct prom_lvalue_s
 {
 	prom_lb_t lval; /**< values for labels in current metric. */
 	uint64_t ts;	/**< timespan. Last time metric was modified. */
+	uint64_t timeout; /**< lvalue timeout in milliseconds. */
 	union
 	{
 		uint64_t cval;			 /**< Counter value. */
@@ -118,6 +119,7 @@ struct prom_metric_s
 {
 	metric_type_t type;		   /**< Metric type. */
 	str name;				   /**< Name of the metric. */
+	uint64_t timeout; /**< Metric timeout in milliseconds. */
 	struct prom_lb_s *lb_name; /**< Names of labels. */
 	struct prom_buckets_upper_s
 			*buckets_upper; /**< Upper bounds for buckets. */
@@ -189,6 +191,56 @@ int double_parse_str(str *s_number, double *pnumber)
 
 error:
 	if(s) {
+		pkg_free(s);
+	}
+	return -1;
+}
+
+/**
+ * @brief Parse a string and convert to integer.
+ *
+ * @param s_number pointer to number string.
+ * @param pnumber integer passed as reference.
+ *
+ * @return 0 on success.
+ * On error value pointed by pnumber is undefined.
+ */
+int int_parse_str(str *s_number, int *pnumber)
+{
+	char *s = NULL;
+
+	if (!s_number || !s_number->s || s_number->len == 0) {
+		LM_ERR("Bad s_number to convert to unsigned integer\n");
+		goto error;
+	}
+
+	if (!pnumber) {
+		LM_ERR("No integer passed by reference\n");
+		goto error;
+	}
+
+	/* We generate a zero terminated string. */
+
+	/* We set last character to zero to get a zero terminated string. */
+	int len = s_number->len;
+	s = pkg_malloc(len + 1);
+	if (!s) {
+		PKG_MEM_ERROR;
+		goto error;
+	}
+	memcpy(s, s_number->s, len);
+	s[len] = '\0'; /* Zero terminated string. */
+
+	/* atoi function does not check for errors. */
+	unsigned int num = atoi(s);
+	LM_DBG("integer number (%.*s) -> %d\n", len, s, num);
+
+	*pnumber = num;
+	pkg_free(s);
+	return 0;
+
+error:
+	if (s) {
 		pkg_free(s);
 	}
 	return -1;
@@ -616,12 +668,72 @@ static prom_lvalue_t *prom_lvalue_get_create(
 		LM_ERR("Cannot create a new lvalue structure\n");
 		return NULL;
 	}
+	p->timeout = p_m->timeout;
 
 	return p;
 }
 
 /**
- * @brief Delete old lvalue structures in a metric.
+ * @brief Find a lvalue based on its labels.
+ *
+ * If it does not exist NULL is returned.
+ *
+ * @return pointer to lvalue on success.
+ * @return NULL on error.
+ */
+static prom_lvalue_t* prom_lvalue_get(prom_metric_t *p_m, str *l1, str *l2, str *l3)
+{
+	if (!p_m) {
+		LM_ERR("No metric found\n");
+		return NULL;
+	}
+
+	/* Check number of elements in labels. */
+	if (l1 == NULL) {
+		if (p_m->lb_name != NULL) {
+			LM_ERR("Number of labels does not match for metric: %.*s\n",
+				   p_m->name.len, p_m->name.s);
+			return NULL;
+		}
+
+	} else if (l2 == NULL) {
+		if (!p_m || !p_m->lb_name || p_m->lb_name->n_elem != 1) {
+			LM_ERR("Number of labels does not match for metric: %.*s\n",
+				   p_m->name.len, p_m->name.s);
+			return NULL;
+		}
+
+	} else if (l3 == NULL) {
+		if (!p_m || !p_m->lb_name || p_m->lb_name->n_elem != 2) {
+			LM_ERR("Number of labels does not match for metric: %.*s\n",
+				   p_m->name.len, p_m->name.s);
+			return NULL;
+		}
+
+	} else {
+		if (!p_m || !p_m->lb_name || p_m->lb_name->n_elem != 3) {
+			LM_ERR("Number of labels does not match for metric: %.*s\n",
+				   p_m->name.len, p_m->name.s);
+			return NULL;
+		}
+
+	} /* if l1 == NULL */
+
+	/* Find existing prom_lvalue_t structure. */
+	prom_lvalue_t *p = p_m->lval_list;
+	while (p) {
+		if (prom_lvalue_compare(p, l1, l2, l3) == 0) {
+			LM_DBG("LValue structure found\n");
+			return p;
+		}
+		p = p->next;
+	}
+
+	return p;
+}
+
+/**
+ * @brief Delete old lvalue structures in a metric - a metric which has local timeout expired or, if it has zero value for local timeout, global timeout expired.
  *
  * Only for shared memory.
  */
@@ -642,8 +754,10 @@ static void prom_metric_timeout_delete(prom_metric_t *p_m)
 	prom_lvalue_t **l = &p_m->lval_list;
 	while(*l != NULL) {
 		prom_lvalue_t *current = *l;
+		uint64_t timeout = current->timeout ? current->timeout : lvalue_timeout;
 
-		if(ts - current->ts > lvalue_timeout) {
+		LM_DBG("metric='%.*s'; lvalue_timeout=%" PRIu64 "; expiration_time=%ld\n", p_m->name.len, p_m->name.s, timeout, (ts - current->ts));
+		if(timeout && (ts - current->ts > timeout)) {
 			LM_DBG("Timeout found\n");
 			*l = (*l)->next;
 
@@ -665,6 +779,7 @@ static void prom_metric_list_timeout_delete()
 	prom_metric_t *p = prom_metric_list;
 
 	while(p) {
+		LM_DBG("metric='%.*s'; metric_timeout=%" PRIu64 "\n", p->name.len, p->name.s, p->timeout);
 		prom_metric_timeout_delete(p);
 		p = p->next;
 	}
@@ -678,7 +793,7 @@ static void prom_metric_list_timeout_delete()
  * @return NULL if no lvalue was found or created.
  * @return pointer to lvalue on success.
  */
-static prom_lvalue_t *prom_metric_lvalue_get(
+static prom_lvalue_t *prom_metric_lvalue_get_create(
 		str *s_name, metric_type_t m_type, str *l1, str *l2, str *l3)
 {
 	if(!s_name || s_name->len == 0 || s_name->s == NULL) {
@@ -687,9 +802,7 @@ static prom_lvalue_t *prom_metric_lvalue_get(
 	}
 
 	/* Delete old lvalue structures. */
-	if(lvalue_timeout > 0) {
-		prom_metric_list_timeout_delete();
-	}
+	prom_metric_list_timeout_delete();
 
 	prom_metric_t *p_m = prom_metric_get(s_name);
 	if(p_m == NULL) {
@@ -718,7 +831,45 @@ static prom_lvalue_t *prom_metric_lvalue_get(
 	}
 
 	p_lv->ts = ts;
-	LM_DBG("New timestamp: %" PRIu64 "\n", p_lv->ts);
+	LM_DBG("New timestamp: %" PRIu64 "; lvalue_timeout=%" PRIu64 "\n", p_lv->ts, p_lv->timeout);
+
+	return p_lv;
+}
+
+/**
+ * @brief Get a lvalue based on its metric name and labels.
+ *
+ * If metric name exists but no lvalue matches then error is returned.
+ *
+ * @return NULL if no lvalue was found.
+ * @return pointer to lvalue on success.
+ */
+static prom_lvalue_t* prom_metric_lvalue_get(str *s_name, str *l1, str *l2, str *l3)
+{
+	if (!s_name || s_name->len == 0 || s_name->s == NULL) {
+		LM_ERR("No name for metric\n");
+		return NULL;
+	}
+
+	prom_metric_t *p_m = prom_metric_get(s_name);
+	if (p_m == NULL) {
+		LM_ERR("No metric found for name: %.*s\n", s_name->len, s_name->s);
+		return NULL;
+	}
+
+	/* Get timestamp. */
+	uint64_t ts;
+	if (get_timestamp(&ts)) {
+		LM_ERR("Fail to get timestamp\n");
+		return NULL;
+	}
+
+	prom_lvalue_t *p_lv = NULL;
+	p_lv = prom_lvalue_get(p_m, l1, l2, l3);
+	if (p_lv == NULL) {
+		LM_ERR("Failed to get lvalue\n");
+		return NULL;
+	}
 
 	return p_lv;
 }
@@ -996,6 +1147,8 @@ int prom_counter_create(char *spec)
 	memset(m_cnt, 0, sizeof(*m_cnt));
 	m_cnt->type = M_COUNTER;
 
+	m_cnt->timeout = 0;
+
 	param_t *p = NULL;
 	for(p = pit; p; p = p->next) {
 		if(p->name.len == 5 && strncmp(p->name.s, "label", 5) == 0) {
@@ -1014,6 +1167,16 @@ int prom_counter_create(char *spec)
 				goto error;
 			}
 			LM_DBG("name = %.*s\n", m_cnt->name.len, m_cnt->name.s);
+
+		} else if (p->name.len == 7 && strncmp(p->name.s, "timeout", 7) == 0) {
+			/* Set counter timeout. */
+			int timeout;
+			if (int_parse_str(&p->body, &timeout)) {
+				LM_ERR("Cannot parse integer\n");
+				goto error;
+			}
+			m_cnt->timeout = ((uint64_t)timeout) * 60000;
+			LM_DBG("timeout = %.*s\n", p->body.len, p->body.s);
 
 		} else {
 			LM_ERR("Unknown field: %.*s (%.*s)\n", p->name.len, p->name.s,
@@ -1094,6 +1257,8 @@ int prom_gauge_create(char *spec)
 	memset(m_gg, 0, sizeof(*m_gg));
 	m_gg->type = M_GAUGE;
 
+	m_gg->timeout = 0;
+
 	param_t *p = NULL;
 	for(p = pit; p; p = p->next) {
 		if(p->name.len == 5 && strncmp(p->name.s, "label", 5) == 0) {
@@ -1112,6 +1277,16 @@ int prom_gauge_create(char *spec)
 				goto error;
 			}
 			LM_DBG("name = %.*s\n", m_gg->name.len, m_gg->name.s);
+
+		} else if (p->name.len == 7 && strncmp(p->name.s, "timeout", 7) == 0) {
+			/* Set counter timeout. */
+			int timeout;
+			if (int_parse_str(&p->body, &timeout)) {
+				LM_ERR("Cannot parse integer\n");
+				goto error;
+			}
+			m_gg->timeout = ((uint64_t)timeout) * 60000;
+			LM_DBG("timeout = %.*s\n", p->body.len, p->body.s);
 
 		} else {
 			LM_ERR("Unknown field: %.*s (%.*s)\n", p->name.len, p->name.s,
@@ -1155,7 +1330,7 @@ int prom_counter_inc(str *s_name, int number, str *l1, str *l2, str *l3)
 
 	/* Find a lvalue based on its metric name and labels. */
 	prom_lvalue_t *p = NULL;
-	p = prom_metric_lvalue_get(s_name, M_COUNTER, l1, l2, l3);
+	p = prom_metric_lvalue_get_create(s_name, M_COUNTER, l1, l2, l3);
 	if(!p) {
 		LM_ERR("Cannot find counter: %.*s\n", s_name->len, s_name->s);
 		lock_release(prom_lock);
@@ -1178,7 +1353,7 @@ int prom_counter_reset(str *s_name, str *l1, str *l2, str *l3)
 
 	/* Find a lvalue based on its metric name and labels. */
 	prom_lvalue_t *p = NULL;
-	p = prom_metric_lvalue_get(s_name, M_COUNTER, l1, l2, l3);
+	p = prom_metric_lvalue_get_create(s_name, M_COUNTER, l1, l2, l3);
 	if(!p) {
 		LM_ERR("Cannot find counter: %.*s\n", s_name->len, s_name->s);
 		lock_release(prom_lock);
@@ -1201,7 +1376,7 @@ int prom_gauge_set(str *s_name, double number, str *l1, str *l2, str *l3)
 
 	/* Find a lvalue based on its metric name and labels. */
 	prom_lvalue_t *p = NULL;
-	p = prom_metric_lvalue_get(s_name, M_GAUGE, l1, l2, l3);
+	p = prom_metric_lvalue_get_create(s_name, M_GAUGE, l1, l2, l3);
 	if(!p) {
 		LM_ERR("Cannot find gauge: %.*s\n", s_name->len, s_name->s);
 		lock_release(prom_lock);
@@ -1216,6 +1391,29 @@ int prom_gauge_set(str *s_name, double number, str *l1, str *l2, str *l3)
 }
 
 /**
+ * @brief Set a timeout for metric.
+ */
+int prom_metric_set_timeout(str *s_name, unsigned int _timeout_minutes, str *l1, str *l2, str *l3)
+{
+	lock_get(prom_lock);
+
+	/* Find a lvalue based on its metric name and labels. */
+	prom_lvalue_t *p = NULL;
+	p = prom_metric_lvalue_get(s_name, l1, l2, l3);
+	if (!p) {
+		LM_ERR("Cannot find metric: %.*s\n", s_name->len, s_name->s);
+		lock_release(prom_lock);
+		return -1;
+	}
+
+	p->timeout = ((uint64_t)_timeout_minutes) * 60000;
+
+	LM_DBG("Set timeout=%" PRIu64 " for lvalue of metric: %.*s\n", p->timeout, s_name->len, s_name->s);
+	lock_release(prom_lock);
+	return 0;
+}
+
+/**
  * @brief Reset value in a gauge.
  */
 int prom_gauge_reset(str *s_name, str *l1, str *l2, str *l3)
@@ -1224,7 +1422,7 @@ int prom_gauge_reset(str *s_name, str *l1, str *l2, str *l3)
 
 	/* Find a lvalue based on its metric name and labels. */
 	prom_lvalue_t *p = NULL;
-	p = prom_metric_lvalue_get(s_name, M_GAUGE, l1, l2, l3);
+	p = prom_metric_lvalue_get_create(s_name, M_GAUGE, l1, l2, l3);
 	if(!p) {
 		LM_ERR("Cannot find gauge: %.*s\n", s_name->len, s_name->s);
 		lock_release(prom_lock);
@@ -1632,7 +1830,7 @@ int prom_histogram_observe(
 
 	/* Find a lvalue based on its metric name and labels. */
 	prom_lvalue_t *p = NULL;
-	p = prom_metric_lvalue_get(s_name, M_HISTOGRAM, l1, l2, l3);
+	p = prom_metric_lvalue_get_create(s_name, M_HISTOGRAM, l1, l2, l3);
 	if(!p) {
 		LM_ERR("Cannot find histogram: %.*s\n", s_name->len, s_name->s);
 		goto error;
