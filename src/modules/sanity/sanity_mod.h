@@ -44,7 +44,8 @@
 #define SANITY_CHECK_DUPTAGS (1 << 12)
 #define SANITY_CHECK_AUTHORIZATION (1 << 13)
 #define SANITY_VIA1_HEADER (1 << 14)
-#define SANITY_MAX_CHECKS (1 << 15) /* Make sure this is the highest value */
+#define SANITY_MAX_CHECKS (1 << 15)
+#define SANITY_MAX_CHECKS (1 << 16) /* Make sure this is the highest value */
 
 /* VIA_SIP_VERSION and VIA_PROTOCOL do not work yet
  * and PARSE_URIS is very expensive */
@@ -52,7 +53,7 @@
 	SANITY_RURI_SIP_VERSION | SANITY_RURI_SCHEME | SANITY_REQUIRED_HEADERS \
 			| SANITY_CSEQ_METHOD | SANITY_CSEQ_VALUE | SANITY_CL           \
 			| SANITY_EXPIRES_VALUE | SANITY_PROXY_REQUIRE                  \
-			| SANITY_CHECK_DIGEST
+			| SANITY_CHECK_DIGEST | SANITY_CHECK_CID
 
 
 #define SANITY_URI_CHECK_RURI (1 << 0)
@@ -68,6 +69,12 @@
 #define SANITY_CHECK_FAILED 0
 #define SANITY_CHECK_ERROR -1
 #define SANITY_CHECK_NOT_APPLICABLE -2
+
+#define SANITY_BROKEN_CID_DETECTED 1
+#define SANITY_CID_OK 0
+
+#define SANITY_GEOLOC_HEADER "Geolocation: "
+#define SANITY_GEOLOC_HEADER_SIZE strlen(SANITY_GEOLOC_HEADER)
 
 extern int default_checks;
 extern str_list_t *proxyrequire_list;
