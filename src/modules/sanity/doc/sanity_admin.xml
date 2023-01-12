@@ -122,6 +122,15 @@
 			available, can be parsed and has an address value.
 			</para>
 		</listitem>
+		<listitem>
+			<para>
+			CID sanity check (32768) - checks if the INVITE has Call-Info or Geolocation header,
+			which contains <varname>cid</varname> identifier, but there is no appropriate
+			Content-ID in any part of multipart/mixed body content, or the INVITE has
+			Call-Info or Geolocation header, which contains <varname>cid</varname> identifier,
+			but Content-Type is not multipart/mixed.
+			</para>
+		</listitem>
 		</itemizedlist>
 	</para>
     </section>
@@ -343,6 +352,34 @@ if(!sanity_check("1024", "6")) {
    xdbg("sanity checks failed\n");
    sanity_reply();
    exit;
+}
+...
+		</programlisting>
+	</example>
+	</section>
+	<section id="sanity.f.cleanup_broken_cid">
+	    <title>
+		<function>cleanup_broken_cid()</function>
+	    </title>
+	<para>
+	The function does the following:
+	- It checks if the INVITE has Call-Info or Geolocation header,
+	which contains <varname>cid</varname> identifier, but there is no appropriate
+	Content-ID in any part of multipart/mixed body content, or the INVITE has
+	Call-Info or Geolocation header, which contains <varname>cid</varname> identifier,
+	but Content-Type is not multipart/mixed.
+	- If function finds a broken <varname>cid</varname> param then it removes appropriate
+	Call-Info or Geolocation header or its part.
+	- if function does not find a broken <varname>cid</varname> param then it does nothing.
+	Function returns zero value if error happens, otherwise 1 is returned.
+	</para>
+	<example>
+		<title><function>cleanup_broken_cid</function> usage</title>
+		<programlisting>
+...
+if(!sanity_check("32768")) {
+   xdbg("sanity CID check failed\n");
+   cleanup_broken_cid();
 }
 ...
 		</programlisting>

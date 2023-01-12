@@ -25,10 +25,12 @@
 #include "sanity.h"
 #include "../../core/ut.h"
 #include "../../core/trim.h"
+#include "../../core/data_lump.h"
 #include "../../core/data_lump_rpl.h"
 #include "../../core/mem/mem.h"
 #include "../../core/parser/parse_uri.h"
 #include "../../core/parser/parse_expires.h"
+#include "../../core/parser/parse_body.h"
 #include "../../core/parser/parse_content.h"
 #include "../../core/parser/digest/digest.h"
 #include "../../core/parser/contact/parse_contact.h"
@@ -50,6 +52,21 @@ typedef struct ksr_sanity_info
 } ksr_sanity_info_t;
 
 static ksr_sanity_info_t _ksr_sanity_info = {0};
+
+static char* strstri(char* string, int len, char* substring)
+{
+	str text = {string, len};
+	str needle = {substring, strlen(substring)};
+	return str_casesearch(&text, &needle);
+}
+
+static void _trim_end_of_str(str* string)
+{
+	char _c;
+	while (string->len && ((_c=string->s[string->len-1])==0 || _c=='\r' || _c=='\n' || _c==' ' || _c=='\t' || _c=='>' )) {
+		string->len--;
+	}
+}
 
 /**
  *
@@ -164,6 +181,27 @@ int str2valid_uint(str *_number, unsigned int *_result)
 	}
 	*_result = result;
 	return 0;
+}
+
+static int str_list_size(str_list_t* _str_list) {
+	int size = 0;
+
+	while (_str_list) {
+		++size;
+		_str_list = _str_list->next;
+	}
+
+	return size;
+}
+
+static int str_list_total_length(str_list_t* _str_list) {
+	int len = 0;
+
+	while (_str_list) {
+		len += _str_list->s.len;
+		_str_list = _str_list->next;
+	}
+	return len;
 }
 
 /* parses the given comma separated string into a string list */
@@ -1011,4 +1049,253 @@ int check_duptags(sip_msg_t *msg)
 	}
 
 	return SANITY_CHECK_PASSED;
+}
+
+static int find_cid_in_body(sip_msg_t* msg, str* hdr) {
+	int found = 1;
+	int content_length;
+	str cid;
+	char *content_body = NULL;
+	char *cid_buf;
+	char *quoted_cid_buf;
+	int l = strlen("cid:");
+	char *pos = strstri(hdr->s, hdr->len, "cid:");
+	char *quote_pos = strstri(hdr->s, hdr->len, ">");
+
+	// get Content-Id:
+	cid.len = hdr->len - l - (pos - hdr->s) - (quote_pos ? hdr->len - (quote_pos - hdr->s) : 0);
+	cid.s = pos + l;
+	_trim_end_of_str(&cid);
+
+	cid_buf = pkg_malloc(cid.len + 1);
+	memcpy(cid_buf, cid.s, cid.len);
+	cid_buf[cid.len] = 0;
+
+	quoted_cid_buf = pkg_malloc(cid.len + 3);
+	quoted_cid_buf[0] = '<';
+	memcpy(quoted_cid_buf + 1, cid.s, cid.len);
+	quoted_cid_buf[cid.len + 1] = '>';
+	quoted_cid_buf[cid.len + 2] = 0;
+
+	// get body part - filter => Content-Id
+	content_body = get_body_part_by_filter(msg, 0, 0, quoted_cid_buf, NULL, &content_length);
+	if (!content_body) {
+		LM_WARN("Content-ID '%s' is not found in 'multipart/mixed' payload, searching for '%s'\n", quoted_cid_buf, cid_buf);
+		content_body = get_body_part_by_filter(msg, 0, 0, cid_buf, NULL, &content_length);
+		if (!content_body) {
+			LM_WARN("Content-ID '%s' is not found in 'multipart/mixed' payload\n", cid_buf);
+			found = 0;
+		}
+	}
+	pkg_free(quoted_cid_buf);
+	pkg_free(cid_buf);
+
+	return found;
+}
+
+static int parse_cid_and_find_in_body(sip_msg_t* msg, struct hdr_field *hf) {
+	str_list_t* cids = parse_str_list(&hf->body);
+	if (cids == NULL) {
+		LM_WARN("parse '%.*s' header failed\n", hf->name.len, hf->name.s);
+		return SANITY_CHECK_FAILED;
+	}
+
+	str_list_t* cid_list = cids;
+	while (cid_list) {
+		LM_DBG("cid: '%.*s'\n", cid_list->s.len, cid_list->s.s);
+		if (!find_cid_in_body(msg, &cid_list->s)) {
+			free_str_list(cids);
+			return SANITY_CHECK_FAILED;
+		}
+		cid_list = cid_list->next;
+	}
+	free_str_list(cids);
+
+	return SANITY_CHECK_PASSED;
+}
+
+int check_cid(sip_msg_t* msg) {
+	struct hdr_field *hf;
+
+	if(parse_headers(msg, HDR_EOH_F, 0) == -1) {
+		LM_ERR("failed to parse SIP headers\n");
+		return SANITY_CHECK_FAILED;
+	}
+
+	if(!msg->content_type) {
+		LM_WARN("The header Content-TYPE is absent!\n");
+		return SANITY_CHECK_FAILED;
+	}
+
+	for(hf = msg->headers; hf; hf = hf->next) {
+		if((hf->type == HDR_OTHER_T) && (hf->name.len == SANITY_GEOLOC_HEADER_SIZE - 2)) {
+			/* possible hit */
+			if(strncasecmp(hf->name.s, SANITY_GEOLOC_HEADER, SANITY_GEOLOC_HEADER_SIZE) == 0) {
+
+				LM_DBG("found geolocation header [%.*s]\n", hf->body.len, hf->body.s);
+
+				if (strstri(hf->body.s, hf->body.len, "cid:")) {
+					str str_type;
+
+					trim_len(str_type.len, str_type.s, msg->content_type->body);
+					if(str_type.len >= 15 && !strncasecmp(str_type.s, "multipart/mixed", 15)) {
+						if (!parse_cid_and_find_in_body(msg, hf)) {
+							return SANITY_CHECK_FAILED;
+						}
+						LM_DBG("CID is OK\n");
+					} else {
+						LM_DBG("The header Content-TYPE is not 'multipart/mixed'\n");
+						return SANITY_CHECK_FAILED;
+					}
+				}
+			}
+		} else if(hf->type == HDR_CALLINFO_T) {
+			LM_DBG("Call-Info header [%.*s]\n", hf->body.len, hf->body.s);
+			if (strstri(hf->body.s, hf->body.len, "cid:")) {
+				str str_type;
+
+				trim_len(str_type.len, str_type.s, msg->content_type->body);
+				if(str_type.len >= 15 && !strncasecmp(str_type.s, "multipart/mixed", 15)) {
+					if (!parse_cid_and_find_in_body(msg, hf)) {
+						return SANITY_CHECK_FAILED;
+					}
+					LM_DBG("CID is OK\n");
+				} else {
+					LM_DBG("The header Content-TYPE is not 'multipart/mixed'\n");
+					return SANITY_CHECK_FAILED;
+				}
+			}
+		}
+	}
+
+	return SANITY_CHECK_PASSED;
+}
+
+static int remove_header(struct sip_msg* msg, struct hdr_field* hf) {
+	if (!msg || !hf) {
+		return -1;
+	}
+
+	LM_INFO("Removing header with broken 'cid:' identifier: '%.*s: %.*s'\n", hf->name.len, hf->name.s, hf->body.len, hf->body.s);
+	struct lump* anchor = del_lump(msg, hf->name.s-msg->buf, hf->len, 0);
+	if (anchor == 0) {
+		LM_ERR("no more pkg memory\n");
+		return -1;
+	}
+
+	return 0;
+}
+
+static int insert_header(struct sip_msg *msg, const char *header, hdr_types_t type)
+{
+	struct lump* anchor = NULL;
+	char *s = NULL;
+	int len = 0;
+
+	LM_DBG("Appending header: %s", header);
+
+	if ((anchor = anchor_lump(msg, msg->unparsed - msg->buf, 0, 0)) == 0) {
+		LM_ERR("failed to get anchor to append header\n");
+		return 1;
+	}
+	len = strlen(header);
+	if ((s = (char *)pkg_malloc(len+1)) == 0) {
+		LM_ERR("No more pkg memory. (size requested = %d)\n", len);
+		return 1;
+	}
+	memcpy(s, header, len);
+	s[len] = '\0';
+	if (insert_new_lump_before(anchor, s, len, type) == 0) {
+		LM_ERR("failed to insert lump\n");
+		pkg_free(s);
+		return 1;
+	}
+	LM_DBG("Done appending header successfully.\n");
+	return 0;
+}
+
+static int find_remove_cid_header(struct sip_msg* msg, struct hdr_field* hf, int is_multipart_mixed) {
+	if (!msg || !hf) {
+		return -1;
+	}
+
+	if (strstri(hf->body.s, hf->body.len, "cid:")) {
+		if (is_multipart_mixed) {
+			str_list_t* cids = parse_str_list(&hf->body);
+			if (cids == NULL) {
+				LM_WARN("parse '%.*s' header failed\n", hf->name.len, hf->name.s);
+				return SANITY_CHECK_FAILED;
+			}
+
+			str_list_t* cid_list = cids;
+			str_list_t* res_cid_list = NULL;
+			while (cid_list) {
+				if (find_cid_in_body(msg, &cid_list->s)) {
+					res_cid_list = str_list_block_add(&res_cid_list, cid_list->s.s, cid_list->s.len);
+				}
+				cid_list = cid_list->next;
+			}
+
+			cid_list = cids;
+			if (str_list_size(res_cid_list) == 0) {
+				LM_INFO("CID is broken, remove header '%.*s'\n", hf->name.len, hf->name.s);
+				remove_header(msg, hf);
+			} else if (str_list_size(res_cid_list) != str_list_size(cid_list)) {
+				int hdr_len = str_list_total_length(res_cid_list) + str_list_size(res_cid_list) + strlen(hf->type == HDR_CALLINFO_T ? "Call-Info: " : SANITY_GEOLOC_HEADER) + strlen("\r\n");
+				char* new_hdr = pkg_mallocxz(hdr_len);
+
+				LM_INFO("Found broken CID in the header containing multiple CID values; '%.*s' will be modified\n", hf->name.len, hf->name.s);
+				strcpy(new_hdr, hf->type == HDR_CALLINFO_T ? "Call-Info: " : SANITY_GEOLOC_HEADER);
+				str_list_t* res_cid_list_1 = res_cid_list;
+				while(res_cid_list_1) {
+					strncpy(new_hdr + strlen(new_hdr), res_cid_list_1->s.s, res_cid_list_1->s.len);
+					strcpy(new_hdr + strlen(new_hdr), ",");
+
+					res_cid_list_1 = res_cid_list_1->next;
+				}
+				new_hdr[strlen(new_hdr) - 1] = 0;
+				strcpy(new_hdr + strlen(new_hdr), "\r\n");
+
+				//NOTE: append new 'Call-Info'/'Geolocation' header and then remove the old one.
+				insert_header(msg, new_hdr, hf->type);
+				remove_header(msg, hf);
+			}
+
+			free_str_list(res_cid_list);
+			free_str_list(cids);
+
+		} else {
+			remove_header(msg, hf);
+		}
+	}
+
+	return 0;
+}
+
+int cleanup_broken_cid(sip_msg_t* msg) {
+	if(!msg->content_type) {
+		LM_WARN("The header Content-TYPE is absent!\n");
+		return 0;
+	}
+
+	str str_type;
+	trim_len(str_type.len, str_type.s, msg->content_type->body);
+
+	int is_multipart_mixed = (str_type.len >= 15 && !strncasecmp(str_type.s, "multipart/mixed", 15)) ? 1 : 0;
+	struct hdr_field *hf;
+
+	for(hf = msg->headers; hf; hf = hf->next) {
+		if((hf->type == HDR_OTHER_T) && (hf->name.len == SANITY_GEOLOC_HEADER_SIZE - 2)) {
+			/* possible hit */
+			if(strncasecmp(hf->name.s, SANITY_GEOLOC_HEADER, SANITY_GEOLOC_HEADER_SIZE) == 0) {
+				LM_DBG("found geolocation header [%.*s]\n", hf->body.len, hf->body.s);
+				find_remove_cid_header(msg, hf, is_multipart_mixed);
+			}
+		} else if(hf->type == HDR_CALLINFO_T) {
+			LM_DBG("Call-Info header [%.*s]\n", hf->body.len, hf->body.s);
+			find_remove_cid_header(msg, hf, is_multipart_mixed);
+		}
+	}
+
+	return 1;
 }

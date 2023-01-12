@@ -48,6 +48,7 @@ sl_api_t _sanity_slb;
 static int mod_init(void);
 static int w_sanity_check(sip_msg_t *_msg, char *_msg_check, char *_uri_check);
 static int w_sanity_reply(sip_msg_t *_msg, char *_p1, char *_p2);
+static int w_cleanup_broken_cid(sip_msg_t *_msg);
 static int bind_sanity(sanity_api_t *api);
 
 /*
@@ -62,6 +63,8 @@ static cmd_export_t cmds[] = {{"sanity_check", (cmd_function)w_sanity_check, 0,
 		{"sanity_reply", (cmd_function)w_sanity_reply, 0, 0, 0,
 				REQUEST_ROUTE | ONREPLY_ROUTE},
 		{"bind_sanity", (cmd_function)bind_sanity, 0, 0, 0, 0},
+		{"cleanup_broken_cid", (cmd_function)w_cleanup_broken_cid, 0, 0, 0,
+				REQUEST_ROUTE|ONREPLY_ROUTE},
 		{0, 0, 0, 0, 0, 0}};
 
 /*
@@ -200,7 +203,10 @@ int sanity_check(struct sip_msg *_msg, int msg_checks, int uri_checks)
 			&& (ret = check_duptags(_msg)) != SANITY_CHECK_PASSED) {
 		goto done;
 	}
-
+	if (SANITY_CHECK_CID & msg_checks &&
+			(ret = check_cid(_msg)) != SANITY_CHECK_PASSED) {
+		goto done;
+	}
 done:
 	return ret;
 }
@@ -258,6 +264,11 @@ static int w_sanity_check(sip_msg_t *_msg, char *_msg_check, char *_uri_check)
 /**
  *
  */
+int w_cleanup_broken_cid(struct sip_msg* msg)
+{
+	return cleanup_broken_cid(msg);
+}
+
 static int ki_sanity_check(sip_msg_t *msg, int mflags, int uflags)
 {
 	int ret;
@@ -278,6 +289,11 @@ static int ki_sanity_check_defaults(sip_msg_t *msg)
 /**
  *
  */
+int ki_cleanup_broken_cid(sip_msg_t *msg)
+{
+	return cleanup_broken_cid(msg);
+}
+
 static int w_sanity_reply(sip_msg_t *_msg, char *_p1, char *_p2)
 {
 	return ki_sanity_reply(_msg);
@@ -315,6 +331,11 @@ static sr_kemi_t sr_kemi_sanity_exports[] = {
 	},
 	{ str_init("sanity"), str_init("sanity_reply"),
 		SR_KEMIP_INT, ki_sanity_reply,
+		{ SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE,
+			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
+	},
+	{ str_init("sanity"), str_init("cleanup_broken_cid"),
+		SR_KEMIP_INT, ki_cleanup_broken_cid,
 		{ SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE,
 			SR_KEMIP_NONE, SR_KEMIP_NONE, SR_KEMIP_NONE }
 	},

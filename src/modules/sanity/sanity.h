@@ -85,4 +85,10 @@ int check_authorization(struct sip_msg *msg, int checks);
 /* check if there are duplicate tag params in From/To headers */
 int check_duptags(sip_msg_t *_msg);
 
+/* check if there are Call-Info or Geolocation headers and no appropriate content in SDP */
+int check_cid(sip_msg_t* _msg);
+
+/* remove Call-Info or Geolocation headers if these headers don't have appropriate content in SDP */
+int cleanup_broken_cid(sip_msg_t* _msg);
+
 #endif /* SANITY_CHK_H */
