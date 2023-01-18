@@ -227,6 +227,7 @@ Packager:   Sergey Safarov <s.safarov@gmail.com>
 License:    GPL-2.0
 Group:      %{PKGGROUP}
 Source:     https://kamailio.org/pub/kamailio/%{ver}/src/%{name}-%{ver}_src.tar.gz
+Source1:    kamailio_version
 URL:        https://kamailio.org/
 Vendor:     kamailio.org
 BuildRoot:  %{_tmppath}/%{name}-%{ver}-buildroot
@@ -1473,6 +1474,8 @@ install -m644 pkg/kamailio/%{dist_name}/%{dist_version}/sipcapture.sysconfig \
 %py_byte_compile %{__python3} %{buildroot}%{_libdir}/kamailio/kamctl/dbtextdb
 %endif
 
+install -m644 %{SOURCE1} %{buildroot}/%{_libdir}/%name/version
+
 # Removing devel files
 rm -f %{buildroot}%{_libdir}/kamailio/lib*.so
 
@@ -1858,6 +1861,7 @@ fi
 %dir %{_datadir}/kamailio/dbtext
 %dir %{_datadir}/kamailio/dbtext/kamailio
 %{_datadir}/kamailio/dbtext/kamailio/*
+%{_libdir}/%name/version
 
 
 %if %{with jansson}
