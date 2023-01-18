@@ -585,6 +585,7 @@ tar: makefile_vars $(auto_gen_keep)
 		--exclude=.\#* \
 		--exclude=*.swp \
 		--exclude=*.swo \
+		--exclude=*.rpm \
 		${tar_extra_args} \
 		-cf - $(notdir $(realpath $(shell pwd)/..)) | \
 			(mkdir -p ../tmp/_tar1; mkdir -p ../tmp/_tar2 ; \

@@ -40,6 +40,7 @@ apk:
 src.rpm: tar
 	mkdir -p ${RPMBUILD_TOP}/SOURCES
 	mv ../../kamailio-$(RELEASE)_src.tar.gz ${RPMBUILD_TOP}/SOURCES/${DIST_ARCHIVE}
+	git log -n 10 > ${RPMBUILD_TOP}/SOURCES/kamailio_version
 	sed -e 's/%define ver .*/%define ver ${RPM_VER}/' \
             -e 's/%define rel .*/%define rel ${RPM_REL}0%{dist}/' \
             -e 's/setup -n %{name}-%{ver}/setup -n kamailio-$(RELEASE)/' \
