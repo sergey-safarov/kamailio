@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd" [
+
+<!-- Include general documentation entities -->
+<!ENTITY % docentities SYSTEM "../../../../doc/docbook/entities.xml">
+%docentities;
+
+]>
+
+<book id="options" xmlns:xi="http://www.w3.org/2001/XInclude">
+    <bookinfo>
+        <title>The endpoints ping module - endpoints availability checking</title>
+	<authorgroup>
+	    <author>
+                <firstname>NGA911</firstname>
+                <surname>NGA911</surname>
+                <affiliation><orgname>NGA911</orgname></affiliation>
+		<address>
+                    <email>support@nga911.com</email>
+		</address>
+	    </author>
+	</authorgroup>
+	<copyright>
+            <year>2023</year>
+            <holder>NGA911</holder>
+	</copyright>
+    </bookinfo>
+    <toc></toc>
+
+    <xi:include href="ping_endpoint_admin.xml"/>
+</book>

@@ -33,6 +33,7 @@
 #include "../../core/cfg/cfg_struct.h"
 #include "../../core/kemi.h"
 
+#include "kz_api.h"
 #include "kz_amqp.h"
 #include "kz_json.h"
 #include "kz_fixup.h"
@@ -185,6 +186,7 @@ static cmd_export_t cmds[] = {
 				fixup_kz_async_amqp, fixup_kz_async_amqp_free, ANY_ROUTE},
 		{"kazoo_query_async", (cmd_function)kz_amqp_async_query_ex, 6,
 				fixup_kz_async_amqp, fixup_kz_async_amqp_free, ANY_ROUTE},
+		{"bind_kazoo", (cmd_function)bind_kazoo, 0, 0, 0, 0},
 
 		{0, 0, 0, 0, 0, 0}};
 
@@ -573,4 +575,29 @@ static void mod_destroy(void)
 	if(kz_worker_pipes) {
 		shm_free(kz_worker_pipes);
 	}
+}
+
+int _kz_kazoo_publish(str* exchange, str* routing_key, str* payload)
+{
+      char *pl = ((str*)payload)->s;
+      struct json_object *j = json_tokener_parse(pl);
+
+      if (j==NULL) {
+          LM_ERR("empty or invalid JSON payload : %.*s\n", payload->len, payload->s);
+          return -1;
+      }
+
+      json_object_put(j);
+      return ki_kz_amqp_publish_hdrs(NULL, exchange, routing_key, payload, NULL);
+}
+
+int bind_kazoo(kazoo_api_t* api)
+{
+    if (!api) {
+        ERR("Invalid parameter value\n");
+        return -1;
+    }
+    api->kz_kazoo_publish = _kz_kazoo_publish;
+
+    return 0;
 }

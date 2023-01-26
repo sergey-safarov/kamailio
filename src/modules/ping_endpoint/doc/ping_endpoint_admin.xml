@@ -1,0 +1,196 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE book PUBLIC "-//OASIS//DTD DocBook XML V4.4//EN"
+"http://www.oasis-open.org/docbook/xml/4.4/docbookx.dtd" [
+
+<!-- Include general documentation entities -->
+<!ENTITY % docentities SYSTEM "../../../../doc/docbook/entities.xml">
+%docentities;
+
+]>
+
+<chapter>
+	<title>Admin Guide</title>
+    <section id="ping_endpoint.overview">
+	<title>Overview</title>
+	<para>
+                This module implements endpoints pinging functionality.
+	</para>
+    </section>
+
+    <section id="ping_endpoint.dep">
+	<title>Dependencies</title>
+	<para>
+	    The following modules must be loaded before this module:
+	    <itemizedlist>
+		<listitem>
+		    <para>
+                        <emphasis>tm</emphasis> - Transaction module
+		    </para>
+                    <para>
+                        <emphasis>sqlops</emphasis> - SQLOps module
+                    </para>
+                    <para>
+                        <emphasis>ipops</emphasis> - ipops module
+                    </para>
+		</listitem>
+	    </itemizedlist>
+	</para>
+    </section>
+    <section>
+            <title>External Libraries or Applications</title>
+            <itemizedlist>
+                    <listitem>
+                            <para>
+                                    <emphasis>libjson</emphasis>.</para>
+                    </listitem>
+            </itemizedlist>
+    </section>
+
+<section id="ping_endpoint.parameters" xmlns:xi="http://www.w3.org/2001/XInclude">
+    <sectioninfo>
+    </sectioninfo>
+
+    <title>Parameters</title>
+
+    <section id="ping_endpoint.p.ping_interval">
+        <title><varname>ping_interval</varname> (integer)</title>
+	<para>
+                This parameter determines the period in seconds when the endpoint pinging
+                routine is called.
+	</para>
+	<para>
+            Default value is 30 seconds.
+	</para>
+	<example>
+            <title>Set <varname>ping_interval</varname> parameter</title>
+	    <programlisting>
+...
+modparam("ping_endpoint", "ping_endpoint", 60)
+...
+	    </programlisting>
+	</example>
+    </section>
+
+    <section id="ping_endpoint.p.ping_from">
+        <title><varname>ping_from</varname> (string)</title>
+	<para>
+                This parameter determines the From header URI, which is used in the OPTIONS
+                SIP messages sent to an endpoint.
+	</para>
+	<para>
+                Default value is <quote>sip:ping_endpoint@nga911.com</quote>.
+	</para>
+	<example>
+            <title>Set <varname>ping_from</varname> parameter</title>
+	    <programlisting>
+...
+modparam("ping_endpoint", "ping_from", "sip:ping_endpoint@MY_HOSTNAME")
+...
+	    </programlisting>
+	</example>
+    </section>
+
+    <section id="ping_endpoint.p.sql_select_conn">
+        <title><varname>sql_select_conn</varname> (string)</title>
+	<para>
+                This parameter sets SQL connection string, which is used for SQL
+                SELECT requests.
+	</para>
+	<example>
+            <title>Set <varname>sql_select_conn</varname> parameter</title>
+	    <programlisting>
+...
+modparam("ping_endpoint", "sql_select_conn", "cb")
+...
+	    </programlisting>
+	</example>
+    </section>
+
+    <section id="ping_endpoint.p.sql_insert_conn">
+        <title><varname>sql_insert_conn</varname> (string)</title>
+        <para>
+                This parameter sets SQL connection string, which is used for SQL
+                INSERT/UPDATE requests.
+        </para>
+        <example>
+            <title>Set <varname>sql_insert_conn</varname> parameter</title>
+            <programlisting>
+...
+modparam("ping_endpoint", "sql_insert_conn", "exec")
+...
+            </programlisting>
+        </example>
+    </section>
+
+    <section id="ping_endpoint.p.amqp_exchange">
+        <title><varname>amqp_exchange</varname> (string)</title>
+	<para>
+                The value is used as <quote>exchange</quote> param for RabbitMQ
+                messages publishing
+	</para>
+	<para>
+                Default value: <quote>bigboard</quote>.
+	</para>
+	<example>
+            <title>Set <varname>amqp_exchange</varname> parameter</title>
+	    <programlisting>
+...
+modparam("ping_endpoint", "amqp_exchange", "bigboard")
+...
+	    </programlisting>
+	</example>
+    </section>
+
+    <section id="ping_endpoint.p.amqp_routing_key">
+        <title><varname>amqp_routing_key</varname> (string)</title>
+        <para>
+                The value is used as <quote>routing_key</quote> param for RabbitMQ
+                messages publishing
+        </para>
+        <para>
+                Default value: <quote>bigboard.ping_resp.kamailio.org</quote>.
+        </para>
+        <example>
+            <title>Set <varname>amqp_routing_key</varname> parameter</title>
+            <programlisting>
+...
+modparam("ping_endpoint", "amqp_routing_key", "bigboard.ping_resp.kamailio.org")
+...
+            </programlisting>
+        </example>
+    </section>
+
+</section>
+
+   <section id="ping_endpoint.functions" xmlns:xi="http://www.w3.org/2001/XInclude">
+    <sectioninfo>
+    </sectioninfo>
+    <title>Functions</title>
+    <section id="ping_endpoint.f.set_endpoint_list_updated">
+	    <title>
+                <function>set_endpoint_list_updated([updated_res_code])</function>
+	    </title>
+	<para>
+                This function is to be called when <quote>endpoint_info</quote> table is updated
+                by receiving endpoint JSON list from erlang application and and this fact is for
+                signalling that the endpoint pinging routing needs to update <quote>endpoint_addr</quote>
+                SQL table
+	</para>
+	<para>
+                The parameters is a static integer or variables holding integer values.
+	</para>
+	<example>
+            <title><function>set_endpoint_list_updated</function> usage</title>
+	    <programlisting>
+<![CDATA[
+...
+if ($var(need_update) > 0) {
+    set_endpoint_list_updated("1");
+}
+...
+]]>
+	    </programlisting>
+	</example>
+    </section>
+   </section>
+</chapter>
