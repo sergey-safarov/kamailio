@@ -421,4 +421,24 @@ CREATE TABLE customers (
     UNIQUE KEY cu_idx (cid)
 );
 
- 
+CREATE TABLE endpoint_info (
+    endpoint_id INT AUTO_INCREMENT NOT NULL,
+    endpoint_id_str VARCHAR(256) NOT NULL,
+    dest_uri VARCHAR(512) NOT NULL,
+    route_headers VARCHAR(2048) DEFAULT NULL,
+    target_uri VARCHAR(512) NOT NULL,
+    comment VARCHAR(512) DEFAULT NULL,
+    status BOOLEAN DEFAULT NULL,
+    UNIQUE KEY endpoint_idx (endpoint_id)
+);
+
+CREATE TABLE endpoint_addr (
+    endpoint_info_id INT NOT NULL,
+    endpoint_id_str VARCHAR(256) NOT NULL,
+    target_uri VARCHAR(512) NOT NULL,
+    request_uri VARCHAR(128) NOT NULL,
+    ip_addr VARCHAR(64) NOT NULL,
+    port INT NOT NULL DEFAULT '5060',
+    protocol INT NOT NULL DEFAULT '1',
+    status BOOLEAN DEFAULT NULL
+);

@@ -1,0 +1,169 @@
+The endpoints ping module - endpoints availability checking
+
+NGA911 NGA911
+
+   NGA911
+
+   Copyright © 2023 NGA911
+     __________________________________________________________________
+
+   Table of Contents
+
+   1. Admin Guide
+
+        1. Overview
+        2. Dependencies
+        3. External Libraries or Applications
+        4. Parameters
+
+              4.1. ping_interval (integer)
+              4.2. ping_from (string)
+              4.3. sql_select_conn (string)
+              4.4. sql_insert_conn (string)
+              4.5. amqp_exchange (string)
+              4.6. amqp_routing_key (string)
+
+        5. Functions
+
+              5.1. set_endpoint_list_updated([updated_res_code])
+
+   List of Examples
+
+   1.1. Set ping_interval parameter
+   1.2. Set ping_from parameter
+   1.3. Set sql_select_conn parameter
+   1.4. Set sql_insert_conn parameter
+   1.5. Set amqp_exchange parameter
+   1.6. Set amqp_routing_key parameter
+   1.7. set_endpoint_list_updated usage
+
+Chapter 1. Admin Guide
+
+   Table of Contents
+
+   1. Overview
+   2. Dependencies
+   3. External Libraries or Applications
+   4. Parameters
+
+        4.1. ping_interval (integer)
+        4.2. ping_from (string)
+        4.3. sql_select_conn (string)
+        4.4. sql_insert_conn (string)
+        4.5. amqp_exchange (string)
+        4.6. amqp_routing_key (string)
+
+   5. Functions
+
+        5.1. set_endpoint_list_updated([updated_res_code])
+
+1. Overview
+
+   This module implements endpoints pinging functionality.
+
+2. Dependencies
+
+   The following modules must be loaded before this module:
+     * tm - Transaction module
+       sqlops - SQLOps module
+       ipops - ipops module
+
+3. External Libraries or Applications
+
+     * libjson.
+
+4. Parameters
+
+   4.1. ping_interval (integer)
+   4.2. ping_from (string)
+   4.3. sql_select_conn (string)
+   4.4. sql_insert_conn (string)
+   4.5. amqp_exchange (string)
+   4.6. amqp_routing_key (string)
+
+4.1. ping_interval (integer)
+
+   This parameter determines the period in seconds when the endpoint
+   pinging routine is called.
+
+   Default value is 30 seconds.
+
+   Example 1.1. Set ping_interval parameter
+...
+modparam("ping_endpoint", "ping_endpoint", 60)
+...
+
+4.2. ping_from (string)
+
+   This parameter determines the From header URI, which is used in the
+   OPTIONS SIP messages sent to an endpoint.
+
+   Default value is “sip:ping_endpoint@nga911.com”.
+
+   Example 1.2. Set ping_from parameter
+...
+modparam("ping_endpoint", "ping_from", "sip:ping_endpoint@MY_HOSTNAME")
+...
+
+4.3. sql_select_conn (string)
+
+   This parameter sets SQL connection string, which is used for SQL SELECT
+   requests.
+
+   Example 1.3. Set sql_select_conn parameter
+...
+modparam("ping_endpoint", "sql_select_conn", "cb")
+...
+
+4.4. sql_insert_conn (string)
+
+   This parameter sets SQL connection string, which is used for SQL
+   INSERT/UPDATE requests.
+
+   Example 1.4. Set sql_insert_conn parameter
+...
+modparam("ping_endpoint", "sql_insert_conn", "exec")
+...
+
+4.5. amqp_exchange (string)
+
+   The value is used as “exchange” param for RabbitMQ messages publishing
+
+   Default value: “bigboard”.
+
+   Example 1.5. Set amqp_exchange parameter
+...
+modparam("ping_endpoint", "amqp_exchange", "bigboard")
+...
+
+4.6. amqp_routing_key (string)
+
+   The value is used as “routing_key” param for RabbitMQ messages
+   publishing
+
+   Default value: “bigboard.ping_resp.kamailio.org”.
+
+   Example 1.6. Set amqp_routing_key parameter
+...
+modparam("ping_endpoint", "amqp_routing_key", "bigboard.ping_resp.kamailio.org")
+...
+
+5. Functions
+
+   5.1. set_endpoint_list_updated([updated_res_code])
+
+5.1.  set_endpoint_list_updated([updated_res_code])
+
+   This function is to be called when “endpoint_info” table is updated by
+   receiving endpoint JSON list from erlang application and and this fact
+   is for signalling that the endpoint pinging routing needs to update
+   “endpoint_addr” SQL table
+
+   The parameters is a static integer or variables holding integer values.
+
+   Example 1.7. set_endpoint_list_updated usage
+...
+if ($var(need_update) > 0) {
+    set_endpoint_list_updated("1");
+}
+...
