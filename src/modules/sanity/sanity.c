@@ -41,6 +41,7 @@
 #define UNSUPPORTED_HEADER_LEN (sizeof(UNSUPPORTED_HEADER) - 1)
 
 extern int ksr_sanity_noreply;
+extern int always_log_missed_content_length;
 
 #define KSR_SANITY_REASON_SIZE 128
 typedef struct ksr_sanity_info
@@ -663,7 +664,9 @@ int check_cl(sip_msg_t *msg)
 		}
 		LM_DBG("check_cl passed\n");
 	} else {
-		LM_WARN("content length header missing in request\n");
+		if (SANITY_LOG_MISSED_CONTENT_LEN == always_log_missed_content_length || msg->rcv.proto != PROTO_UDP) {
+			LM_WARN("content length header missing in request\n");
+		}
 	}
 
 	return SANITY_CHECK_PASSED;

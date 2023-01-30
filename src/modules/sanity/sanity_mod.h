@@ -76,6 +76,9 @@
 #define SANITY_GEOLOC_HEADER "Geolocation: "
 #define SANITY_GEOLOC_HEADER_SIZE strlen(SANITY_GEOLOC_HEADER)
 
+#define SANITY_DONT_LOG_MISSED_CONTENT_LEN 0
+#define SANITY_LOG_MISSED_CONTENT_LEN 1
+
 extern int default_checks;
 extern str_list_t *proxyrequire_list;
 
