@@ -34,6 +34,7 @@
  * Module: \ref http_client
  */
 
+#include <openssl/ssl.h>
 
 #include "../../core/mod_fix.h"
 #include "../../core/pvar.h"
@@ -73,6 +74,28 @@ typedef struct
 	curl_con_pkg_t *pconn;
 } curl_query_t;
 
+extern BIO *bio_keylog;
+
+void keylog_callback(const SSL *ssl, const char *line)
+{
+    if (bio_keylog == NULL) {
+        LM_ERR("Keylog callback is invoked without valid file!\n");
+        return;
+    }
+
+    /*
+    * There might be concurrent writers to the keylog file, so we must ensure
+    * that the given line is written at once.
+    */
+    BIO_printf(bio_keylog, "%s\n", line);
+    (void)BIO_flush(bio_keylog);
+}
+
+static CURLcode sslctx_function(CURL *curl, void *sslctx, void *parm)
+{
+  SSL_CTX_set_keylog_callback((SSL_CTX *)sslctx, keylog_callback);
+  return CURLE_OK;
+}
 
 /*
  * curl write function that saves received data as zero terminated
@@ -277,6 +300,8 @@ static int curL_request_url(struct sip_msg *_m, const char *_met,
 
 	if(params->useragent)
 		res |= curl_easy_setopt(curl, CURLOPT_USERAGENT, params->useragent);
+
+    res |= curl_easy_setopt(curl, CURLOPT_SSL_CTX_FUNCTION, *sslctx_function);
 
 	if(res != CURLE_OK) {
 		/* PANIC */
