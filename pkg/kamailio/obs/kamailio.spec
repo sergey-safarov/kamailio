@@ -1285,7 +1285,7 @@ make every-module skip_modules="app_mono db_cassandra db_oracle iptrtpproxy \
 %if %{with phonenum}
     kphonenum \
 %endif
-    kpostgres kpresence \
+    kping_endpoint kpostgres kpresence \
 %if %{with python2}
     kpython \
 %endif
@@ -1399,7 +1399,7 @@ make install-modules-all skip_modules="app_mono db_cassandra db_oracle \
 %if %{with phonenum}
     kphonenum \
 %endif
-    kpostgres kpresence \
+    kping_endpoint kpostgres kpresence \
 %if %{with python2}
     kpython \
 %endif
@@ -1593,6 +1593,7 @@ fi
 %doc %{_docdir}/kamailio/modules/README.pdt
 %doc %{_docdir}/kamailio/modules/README.permissions
 %doc %{_docdir}/kamailio/modules/README.pike
+%doc %{_docdir}/kamailio/modules/README.ping_endpoint
 %doc %{_docdir}/kamailio/modules/README.pipelimit
 %doc %{_docdir}/kamailio/modules/README.posops
 %doc %{_docdir}/kamailio/modules/README.prefix_route
@@ -1757,6 +1758,7 @@ fi
 %{_libdir}/kamailio/modules/pdt.so
 %{_libdir}/kamailio/modules/permissions.so
 %{_libdir}/kamailio/modules/pike.so
+%{_libdir}/kamailio/modules/ping_endpoint.so
 %{_libdir}/kamailio/modules/pipelimit.so
 %{_libdir}/kamailio/modules/posops.so
 %{_libdir}/kamailio/modules/prefix_route.so
