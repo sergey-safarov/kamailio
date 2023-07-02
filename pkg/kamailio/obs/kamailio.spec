@@ -1251,6 +1251,7 @@ make every-module skip_modules="app_mono db_cassandra db_oracle iptrtpproxy \
 %endif
 %if %{with geoip}
     kgeoip \
+    kgeoip2 \
 %endif
     kgzcompress \
 %if %{with http_async_client}
@@ -1358,6 +1359,7 @@ make install-modules-all skip_modules="app_mono db_cassandra db_oracle \
 %endif
 %if %{with geoip}
     kgeoip \
+    kgeoip2 \
 %endif
     kgzcompress \
 %if %{with http_async_client}
@@ -1945,7 +1947,9 @@ fi
 %files      geoip
 %defattr(-,root,root)
 %doc %{_docdir}/kamailio/modules/README.geoip
+%doc %{_docdir}/kamailio/modules/README.geoip2
 %{_libdir}/kamailio/modules/geoip.so
+%{_libdir}/kamailio/modules/geoip2.so
 %endif
 
 
