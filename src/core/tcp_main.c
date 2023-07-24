@@ -1280,6 +1280,43 @@ inline static int find_listening_sock_info(
 			int optval = 1;
 			su2ip_addr(&ip, &si->su);
 			*from = &si->su;
+			if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void *)&optval,
+					   sizeof(optval))
+					== -1) {
+				LM_ERR("setsockopt SO_REUSEADDR %s\n", strerror(errno));
+				/* continue, not critical */
+			}
+			optval = 1;
+			if(setsockopt(s, SOL_SOCKET, SO_REUSEPORT, (void *)&optval,
+					   sizeof(optval))
+					== -1) {
+				LM_ERR("setsockopt SO_REUSEPORT %s\n", strerror(errno));
+				/* continue, not critical */
+			}
+			if(unlikely(bind(s, &si->su.s, sockaddru_len(si->su)) != 0)) {
+				LM_WARN("binding to source address %s failed: %s [%d]\n",
+						su2a(&si->su, sizeof(si->su)), strerror(errno), errno);
+				return -1;
+			}
+		}
+	} else {
+		if(unlikely(bind(s, &(*from)->s, sockaddru_len(**from)) != 0)) {
+			LM_WARN("binding to source address %s failed: %s [%d]\n",
+						su2a(&si->su, sizeof(si->su)), strerror(errno), errno);
+			return -1;
+		}
+	}
+	return 0;
+}
+
+	si = find_si(&ip, 0, type);
+
+	if(unlikely(si == 0)) {
+		si = find_sock_info_by_address_family(type, ip.af);
+		if(si) {
+			int optval = 1;
+			su2ip_addr(&ip, &si->su);
+			*from = &si->su;
 #if !defined(TCP_DONT_REUSEADDR)
 			if(setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (void *)&optval,
 					   sizeof(optval))
