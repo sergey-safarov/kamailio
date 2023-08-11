@@ -11,7 +11,6 @@
 #include "../tm/tm_load.h"
 
 #include "../../modules/ipops/api.h"
-#include "../../modules/kazoo/kz_api.h"
 #include "../../modules/sqlops/sql_api.h"
 
 #include "ping_endpoint.h"
@@ -46,7 +45,6 @@ str amqp_routing_key = str_init("bigboard.ping_resp.kamailio.org");
 
 static sqlops_api_t pe_sqlops;
 static ipops_api_t pe_ipops;
-static kazoo_api_t pe_kazoo_ops;
 struct tm_binds tmb;
 
 endpoint_info_list_t* ei_list = NULL;
@@ -127,12 +125,6 @@ static int mod_init()
         return -1;
     }
     LM_DBG("loaded ipops api\n");
-
-    if (kazoo_load_api(&pe_kazoo_ops) < 0) {
-        LM_ERR("can't load kazoo API\n");
-        return -1;
-    }
-    LM_DBG("loaded kazoo api\n");
 
     if (load_tm_api(&tmb)!=0) {
         LM_ERR("can't load TM API\n");
@@ -451,10 +443,6 @@ void pp_options_callback(struct cell *t, int type, struct tmcb_params *ps)
 
         if (json) {
             LM_INFO("JSON to publish to kazoo: %s\n", json);
-
-            str payload = {json, strlen(json) - 1};
-
-            pe_kazoo_ops.kz_kazoo_publish(&amqp_exchange, &amqp_routing_key, &payload);
 
             pkg_free(json);
         }
