@@ -1007,6 +1007,16 @@ Requires:   kamailio = %ver
 Send commands to statsd server.
 
 
+%package        stirshaken
+Summary:        This module implements STIR and SHAKEN for Kmailio
+Group:          %{PKGGROUP}
+Requires:       kamailio = %version
+BuildRequires:  libstirshaken-devel
+
+%description    stirshaken
+stirshaken module for Kamailio.
+
+
 %package        sqlang
 Summary:        Squirrel Language (SQLang) for Kamailio
 Group:          %{PKGGROUP}
@@ -1295,6 +1305,7 @@ make every-module skip_modules="app_mono db_cassandra db_oracle iptrtpproxy \
     ksctp \
 %endif
     ksnmpstats ksqlite \
+    kstirshaken \
 %if "%{?_unitdir}" != ""
     ksystemd \
 %endif
@@ -1408,6 +1419,7 @@ make install-modules-all skip_modules="app_mono db_cassandra db_oracle \
     ksctp \
 %endif
     ksnmpstats ksqlite \
+    kstirshaken \
 %if "%{?_unitdir}" != ""
     ksystemd \
 %endif
@@ -2334,6 +2346,12 @@ fi
 %defattr(-,root,root)
 %{_docdir}/kamailio/modules/README.statsd
 %{_libdir}/kamailio/modules/statsd.so
+
+
+%files      stirshaken
+%defattr(-,root,root)
+%{_docdir}/kamailio/modules/README.stirshaken
+%{_libdir}/kamailio/modules/stirshaken.so
 
 
 %files      sqlite
