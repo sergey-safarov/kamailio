@@ -55,9 +55,9 @@ str pp_ping_from = str_init("sip:ping_endpoint@nga911.com");
 enum ENDPOINT_INFO_COLUMN {
     PI_ENDPOINT_ID_COLUMN       = 0,
     PI_ENDPOINT_ID_STR_COLUMN   = 1,
-    PI_DEST_URI_COLUMN      = 2,
+    PI_REQUEST_URI_COLUMN   = 2,
     PI_ROUTE_HEADERS_COLUMN = 3,
-    PI_TARGET_URI_COLUMN    = 4,
+    PI_FIRST_HOP_URI_COLUMN = 4,
     PI_COMMENT_COLUMN       = 5,
     PI_STATUS_COLUMN        = 6
 };
@@ -65,12 +65,13 @@ enum ENDPOINT_INFO_COLUMN {
 enum ENDPOINT_ADDR_COLUMN {
     PA_ENDPOINT_INFO_ID_COLUMN = 0,
     PA_ENDPOINT_ID_STR_COLUMN  = 1,
-    PA_TARGET_URI_COLUMN   = 2,
-    PA_REQUEST_URI_COLUMN  = 3,
-    PA_IP_ADDR_COLUMN      = 4,
-    PA_PORT_COLUMN         = 5,
-    PA_PROTOCOL_COLUMN     = 6,
-    PA_STATUS_COLUMN       = 7
+    PA_FIRST_HOP_URI_COLUMN = 2,
+    PA_REQUEST_URI_COLUMN   = 3,
+    PA_ROUTE_HEADERS_COLUMN = 4,
+    PA_IP_ADDR_COLUMN       = 5,
+    PA_PORT_COLUMN          = 6,
+    PA_PROTOCOL_COLUMN      = 7,
+    PA_STATUS_COLUMN        = 8
 };
 
 /*
@@ -191,7 +192,7 @@ int pp_set_endpoint_list_updated(sip_msg_t* _msg, char* _updated)
     return 1;
 }
 
-int resolve_dns_name(str* name, unsigned short* port, char* proto, endpoint_addr_list_t **slist)
+int resolve_dns_name(str* name, unsigned short* port, char* proto, str* ruri, endpoint_addr_list_t **slist)
 {
     struct ip_addr ip;
     int dns_flags = DNS_TRY_NAPTR;
@@ -211,16 +212,16 @@ int resolve_dns_name(str* name, unsigned short* port, char* proto, endpoint_addr
             char* ip_str = ip_addr2strz(&ip);
             int len = strlen(ip_str) + 128;
 
-            char* target_uri=pkg_mallocxz(len);
-            if (target_uri == NULL) {
+            char* first_hop_uri=pkg_mallocxz(len);
+            if (first_hop_uri == NULL) {
                 PKG_MEM_ERROR;
                 return -1;
             }
 
-            snprintf(target_uri, len, "sip:%s", ip_str);
+            snprintf(first_hop_uri, len, "sip:%s", ip_str);
 
             if (*port && *port != 5060) {
-                snprintf(target_uri + strlen(target_uri), len - strlen(target_uri), ":%d", *port);
+                snprintf(first_hop_uri + strlen(first_hop_uri), len - strlen(first_hop_uri), ":%d", *port);
             }
             if (*proto != PROTO_UDP) {
                 char _proto[8] = {0};
@@ -231,11 +232,11 @@ int resolve_dns_name(str* name, unsigned short* port, char* proto, endpoint_addr
                     *proto = PROTO_UDP;
                 }
                 memcpy(_proto, sproto.s, sproto.len);
-                snprintf(target_uri + strlen(target_uri), len - strlen(target_uri), ";transport=%s", _proto);
+                snprintf(first_hop_uri + strlen(first_hop_uri), len - strlen(first_hop_uri), ";transport=%s", _proto);
             }
 
-            *slist = endpoint_addr_list_block_add(slist, 0, NULL, 0, NULL, 0, target_uri, strlen(target_uri), ip_str, len, *port, *proto, -1);
-            pkg_free(target_uri);
+            *slist = endpoint_addr_list_block_add(slist, 0, NULL, 0, first_hop_uri, strlen(first_hop_uri), ruri->s, ruri->len, ip_str, len, *port, *proto, -1);
+            pkg_free(first_hop_uri);
         }
 
         ret = dns_srv_handle_next(&dns_srv_h, ret);
@@ -298,7 +299,7 @@ static int send_ping_option() {
     for (; row < rows; ++row) {
         int endpoint_info_id_val;
         str endpoint_id_str_val = STR_NULL;
-        str target_uri_val = STR_NULL;
+        str first_hop_uri_val = STR_NULL;
         str request_uri_val = STR_NULL;
         str ip_addr_val = STR_NULL;
         int port = 5060;
@@ -321,8 +322,8 @@ static int send_ping_option() {
                 case PA_ENDPOINT_ID_STR_COLUMN:
                     pp_str_copy(&val->value.s, &endpoint_id_str_val);
                     break;
-                case PA_TARGET_URI_COLUMN:
-                    pp_str_copy(&val->value.s, &target_uri_val);
+                case PA_FIRST_HOP_URI_COLUMN:
+                    pp_str_copy(&val->value.s, &first_hop_uri_val);
                     break;
                 case PA_REQUEST_URI_COLUMN:
                     pp_str_copy(&val->value.s, &request_uri_val);
@@ -351,7 +352,7 @@ static int send_ping_option() {
                 cur_addr = endpoint_addr_list_block_add(&cur_addr,
                                                     endpoint_info_id_val,
                                                     endpoint_id_str_val.s, endpoint_id_str_val.len,
-                                                    target_uri_val.s, target_uri_val.len,
+                                                    first_hop_uri_val.s, first_hop_uri_val.len,
                                                     request_uri_val.s, request_uri_val.len,
                                                     ip_addr_val.s, ip_addr_val.len,
                                                     port, proto, status);
@@ -363,7 +364,7 @@ static int send_ping_option() {
                 cur_addr = endpoint_addr_list_block_add(&cur_addr,
                                                     endpoint_info_id_val,
                                                     endpoint_id_str_val.s, endpoint_id_str_val.len,
-                                                    target_uri_val.s, target_uri_val.len,
+                                                    first_hop_uri_val.s, first_hop_uri_val.len,
                                                     request_uri_val.s, request_uri_val.len,
                                                     ip_addr_val.s, ip_addr_val.len,
                                                     port, proto, status);
@@ -375,7 +376,7 @@ static int send_ping_option() {
             cur_addr = endpoint_addr_list_block_add(&cur_addr,
                                                 endpoint_info_id_val,
                                                 endpoint_id_str_val.s, endpoint_id_str_val.len,
-                                                target_uri_val.s, target_uri_val.len,
+                                                first_hop_uri_val.s, first_hop_uri_val.len,
                                                 request_uri_val.s, request_uri_val.len,
                                                 ip_addr_val.s, ip_addr_val.len,
                                                 port, proto, status);
@@ -383,7 +384,7 @@ static int send_ping_option() {
         }
 
         pkg_free(endpoint_id_str_val.s);
-        pkg_free(target_uri_val.s);
+        pkg_free(first_hop_uri_val.s);
         pkg_free(request_uri_val.s);
         pkg_free(ip_addr_val.s);
     }
@@ -396,10 +397,10 @@ static int send_ping_option() {
         LM_DBG("Handling the following endpoint_info_id=%d\n", current->endpoint_info_id);
         cur_addr = current->addr_list;
         while (cur_addr) {
-            LM_DBG("OPTIONS send for  the following ENDPOINT: endpoint_info_id=%d endpoint_id_str='%.*s' target_uri='%.*s' request_uri='%.*s' ip_addr='%.*s' port=%d proto=%d status=%d\n",
+            LM_DBG("OPTIONS send for  the following ENDPOINT: endpoint_info_id=%d endpoint_id_str='%.*s' first_hop_uri='%.*s' request_uri='%.*s' ip_addr='%.*s' port=%d proto=%d status=%d\n",
                     current->endpoint_info_id,
                     cur_addr->endpoint_id_str.len, cur_addr->endpoint_id_str.s,
-                    cur_addr->target_uri.len, cur_addr->target_uri.s,
+                    cur_addr->first_hop_uri.len, cur_addr->first_hop_uri.s,
                     cur_addr->request_uri.len, cur_addr->request_uri.s,
                     cur_addr->ip_addr.len, cur_addr->ip_addr.s,
                     cur_addr->port, cur_addr->proto, cur_addr->status);
@@ -418,12 +419,12 @@ int do_send_ping_option(endpoint_addr_list_t* addr_list)
     str pp_ping_method = str_init("OPTIONS");
     uac_req_t uac_r;
 
-    LM_DBG("Send params for ping endpoint iteration: target_uri='%.*s' request_uri='%.*s'\n", addr_list->target_uri.len, addr_list->target_uri.s, addr_list->request_uri.len, addr_list->request_uri.s);
+    LM_DBG("Send params for ping endpoint iteration: first_hop_uri='%.*s' request_uri='%.*s'\n", addr_list->first_hop_uri.len, addr_list->first_hop_uri.s, addr_list->request_uri.len, addr_list->request_uri.s);
 
     set_uac_req(&uac_r, &pp_ping_method, 0, 0, 0, TMCB_LOCAL_COMPLETED, pp_options_callback, (void *)addr_list);
 
-    if (tmb.t_request(&uac_r, &addr_list->target_uri, &addr_list->target_uri, &pp_ping_from, &addr_list->request_uri) < 0) {
-        LM_ERR("unable to ping [%.*s]\n", addr_list->target_uri.len, addr_list->target_uri.s);
+    if (tmb.t_request(&uac_r, &addr_list->request_uri, &addr_list->request_uri, &pp_ping_from, &addr_list->first_hop_uri) < 0) {
+        LM_ERR("unable to ping [%.*s]\n", addr_list->first_hop_uri.len, addr_list->first_hop_uri.s);
         atomic_dec(pe_endpoint_counter);
         return -1;
     }
@@ -463,12 +464,12 @@ void pp_options_callback(struct cell *t, int type, struct tmcb_params *ps)
 
 int update_endpoint_info_table(endpoint_info_list_t* _ei_list) {
     endpoint_info_list_t *current_info = _ei_list;
-    static const char* endpoint_addr_update = "UPDATE endpoint_addr SET status=%s WHERE endpoint_id_str='%.*s' AND target_uri='%.*s' AND request_uri='%.*s'";
+    static const char* endpoint_addr_update = "UPDATE endpoint_addr SET status=%s WHERE endpoint_id_str='%.*s' AND first_hop_uri='%.*s' AND request_uri='%.*s'";
     while (current_info) {
         endpoint_addr_list_t *current_addr = current_info->addr_list;
         while (current_addr) {
             if (current_addr->status != current_addr->status_by_ping) {
-                int query_len = strlen(endpoint_addr_update) + current_addr->endpoint_id_str.len + current_addr->target_uri.len + current_addr->request_uri.len + 64;
+                int query_len = strlen(endpoint_addr_update) + current_addr->endpoint_id_str.len + current_addr->first_hop_uri.len + current_addr->request_uri.len + 64;
                 char *update_query = pkg_mallocxz(query_len);
                 if (update_query == NULL) {
                     PKG_MEM_ERROR;
@@ -479,13 +480,13 @@ int update_endpoint_info_table(endpoint_info_list_t* _ei_list) {
                         endpoint_addr_update,
                         current_addr->status_by_ping ? "TRUE" : "FALSE",
                         current_addr->endpoint_id_str.len, current_addr->endpoint_id_str.s,
-                        current_addr->target_uri.len, current_addr->target_uri.s,
+                        current_addr->first_hop_uri.len, current_addr->first_hop_uri.s,
                         current_addr->request_uri.len, current_addr->request_uri.s);
 
-                LM_DBG("UPDATE DB for the following addr: endpoint_info_id=%d; request_uri='%.*s' target_uri='%.*s'\n",
+                LM_DBG("UPDATE DB for the following addr: endpoint_info_id=%d; request_uri='%.*s' first_hop_uri='%.*s'\n",
                        current_addr->endpoint_info_id,
                        current_addr->request_uri.len, current_addr->request_uri.s,
-                       current_addr->target_uri.len, current_addr->target_uri.s);
+                       current_addr->first_hop_uri.len, current_addr->first_hop_uri.s);
 
                 str update_query_str = {update_query, strlen(update_query)};
                 if (pe_sqlops.query(&exec_conn, &update_query_str, NULL) < 0) {
@@ -534,7 +535,7 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
 
     if (need_update) {
         static str endpoint_info_query = str_init("SELECT * FROM endpoint_info");
-        static const char* endpoint_addr_insert = "INSERT INTO endpoint_addr (endpoint_info_id, endpoint_id_str, target_uri, request_uri, ip_addr, port, protocol) VALUES (%d, '%.*s', '%.*s', '%.*s', '%.*s', %d, %d)";
+        static const char* endpoint_addr_insert = "INSERT INTO endpoint_addr (endpoint_info_id, endpoint_id_str, first_hop_uri, request_uri, ip_addr, port, protocol) VALUES (%d, '%.*s', '%.*s', '%.*s', '%.*s', %d, %d)";
         int cache_flushed = 0;
 
         if (pe_sqlops.query(&cb_conn, &endpoint_info_query, &res) < 0) {
@@ -556,11 +557,11 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
 
             int endpoint_id_val;
             char _endpoint_id_str_val[PE_FIELD_SIZE] = {0};
-            char _dest_uri_val[PE_FIELD_SIZE] = {0};
-            char _target_uri_val[PE_FIELD_SIZE] = {0};
+            char _request_uri_val[PE_FIELD_SIZE] = {0};
+            char _first_hop_uri_val[PE_FIELD_SIZE] = {0};
             str endpoint_id_str_val = {_endpoint_id_str_val, PE_FIELD_SIZE};
-            str dest_uri_val = {_dest_uri_val, PE_FIELD_SIZE};
-            str target_uri_val = {_target_uri_val, PE_FIELD_SIZE};
+            str request_uri_val = {_request_uri_val, PE_FIELD_SIZE};
+            str first_hop_uri_val = {_first_hop_uri_val, PE_FIELD_SIZE};
             int port = 5060;
             int proto = PROTO_UDP;
 
@@ -581,19 +582,19 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
                         strncpy(endpoint_id_str_val.s, val->value.s.s, val->value.s.len);
                         endpoint_id_str_val.len = val->value.s.len;
                         break;
-                    case PI_DEST_URI_COLUMN:
-                        strncpy(dest_uri_val.s, val->value.s.s, val->value.s.len);
-                        dest_uri_val.len = val->value.s.len;
+                    case PI_REQUEST_URI_COLUMN:
+                        strncpy(request_uri_val.s, val->value.s.s, val->value.s.len);
+                        request_uri_val.len = val->value.s.len;
                         break;
-                    case PI_TARGET_URI_COLUMN:
-                        strncpy(target_uri_val.s, val->value.s.s, val->value.s.len);
-                        target_uri_val.len = val->value.s.len;
+                    case PI_FIRST_HOP_URI_COLUMN:
+                        strncpy(first_hop_uri_val.s, val->value.s.s, val->value.s.len);
+                        first_hop_uri_val.len = val->value.s.len;
                     default:
                         break;
                 }
             }
 
-            if (!parse_uri(target_uri_val.s, target_uri_val.len, &uri)) {
+            if (!parse_uri(first_hop_uri_val.s, first_hop_uri_val.len, &uri)) {
                 str sproto = STR_NULL;
                 if(PROTO_NONE == uri.proto || get_valid_proto_string(uri.proto, 1, 1, &sproto) < 0) {
                     LM_WARN("unknown transport protocol - fall back to udp\n");
@@ -604,7 +605,7 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
                     proto = uri.proto;
                 }
                 LM_DBG("Successfully parsed URI: '%.*s'; hostname='%.*s'; protocol=%d; protocol_str='%.*s'; port_str='%.*s'; port=%d\n",
-                        target_uri_val.len, target_uri_val.s,
+                        first_hop_uri_val.len, first_hop_uri_val.s,
                         uri.host.len, uri.host.s,
                         proto,
                         sproto.len, sproto.s,
@@ -615,24 +616,24 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
                 }
 
             } else {
-                LM_ERR("Error parse target URI: [%.*s]\n", target_uri_val.len, target_uri_val.s);
+                LM_ERR("Error parse target URI: [%.*s]\n", first_hop_uri_val.len, first_hop_uri_val.s);
                 continue;
             }
 
             endpoint_addr_list_t* addr_list = NULL;
             if (pe_ipops.is_ip(&uri.host) > 0) {
                 int len = uri.host.len + 128;
-                char* target_uri_str = pkg_mallocxz(len);
-                if (target_uri_str == NULL) {
+                char* first_hop_uri_str = pkg_mallocxz(len);
+                if (first_hop_uri_str == NULL) {
                     PKG_MEM_ERROR;
                     return -1;
                 }
 
-                memcpy(target_uri_str, "sip:", 4);
-                memcpy(target_uri_str + strlen(target_uri_str), uri.host.s, uri.host.len);
+                memcpy(first_hop_uri_str, "sip:", 4);
+                memcpy(first_hop_uri_str + strlen(first_hop_uri_str), uri.host.s, uri.host.len);
 
                 if (port && port != 5060) {
-                    snprintf(target_uri_str + strlen(target_uri_str), len - strlen(target_uri_str), ":%d", port);
+                    snprintf(first_hop_uri_str + strlen(first_hop_uri_str), len - strlen(first_hop_uri_str), ":%d", port);
                 }
                 if (proto != PROTO_UDP) {
                     char _proto[8] = {0};
@@ -642,16 +643,16 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
                         sproto.len = 3;
                     }
                     memcpy(_proto, sproto.s, sproto.len);
-                    snprintf(target_uri_str + strlen(target_uri_str), len - strlen(target_uri_str), ";transport=%s", _proto);
+                    snprintf(first_hop_uri_str + strlen(first_hop_uri_str), len - strlen(first_hop_uri_str), ";transport=%s", _proto);
                 }
-                addr_list = endpoint_addr_list_block_add(&addr_list, endpoint_id_val, endpoint_id_str_val.s, endpoint_id_str_val.len, target_uri_str, strlen(target_uri_str), dest_uri_val.s, dest_uri_val.len, uri.host.s, uri.host.len, port, proto, -1);
-                pkg_free(target_uri_str);
+                addr_list = endpoint_addr_list_block_add(&addr_list, endpoint_id_val, endpoint_id_str_val.s, endpoint_id_str_val.len, first_hop_uri_str, strlen(first_hop_uri_str), request_uri_val.s, request_uri_val.len, uri.host.s, uri.host.len, port, proto, -1);
+                pkg_free(first_hop_uri_str);
             } else {
                 if (!cache_flushed) {
                     dns_cache_flush(0);
                     cache_flushed = 1;
                 }
-                if (resolve_dns_name(&uri.host, (unsigned short*)&port, (char*)&proto, &addr_list) != 0) {
+                if (resolve_dns_name(&uri.host, (unsigned short*)&port, (char*)&proto, &request_uri_val, &addr_list) != 0) {
                     LM_ERR("Error DNS resolve for URI: [%.*s]\n", uri.host.len, uri.host.s);
                     continue;
                 }
@@ -659,7 +660,7 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
 
             while (addr_list) {
                 endpoint_addr_list_t* prev = addr_list;
-                int query_len = strlen(endpoint_addr_insert) + endpoint_id_str_val.len + target_uri_val.len + addr_list->request_uri.len + addr_list->ip_addr.len + 128;
+                int query_len = strlen(endpoint_addr_insert) + endpoint_id_str_val.len + first_hop_uri_val.len + addr_list->request_uri.len + addr_list->ip_addr.len + 128;
                 char *insert_query = pkg_mallocxz(query_len);
                 if (insert_query == NULL) {
                     PKG_MEM_ERROR;
@@ -671,7 +672,7 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
                         endpoint_addr_insert,
                         endpoint_id_val,
                         endpoint_id_str_val.len, endpoint_id_str_val.s,
-                        target_uri_val.len, target_uri_val.s,
+                        first_hop_uri_val.len, first_hop_uri_val.s,
                         addr_list->request_uri.len, addr_list->request_uri.s,
                         addr_list->ip_addr.len, addr_list->ip_addr.s,
                         addr_list->port, addr_list->proto);
