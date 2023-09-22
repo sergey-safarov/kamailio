@@ -4,7 +4,7 @@
 endpoint_addr_list_t* endpoint_addr_list_block_add(endpoint_addr_list_t **head,
                                            int endpoint_info_id,
                                            char *_endpoint_id_str, int endpoint_id_str_len,
-                                           char *_target_uri_str, int target_uri_len,
+                                           char *_first_hop_uri_str, int first_hop_uri_len,
                                            char *_request_uri_str, int request_uri_len,
                                            char *_ip_addr_str, int ip_addr_len,
                                            int port, char proto, int status)
@@ -32,27 +32,27 @@ endpoint_addr_list_t* endpoint_addr_list_block_add(endpoint_addr_list_t **head,
         ea_list->endpoint_id_str.len = 0;
     }
 
-    if (_target_uri_str && target_uri_len > 0) {
-        ea_list->target_uri.s = shm_mallocxz((target_uri_len+1)*sizeof(char));
-        if (!ea_list->target_uri.s) {
+    if (_first_hop_uri_str && first_hop_uri_len > 0) {
+        ea_list->first_hop_uri.s = shm_mallocxz((first_hop_uri_len+1)*sizeof(char));
+        if (!ea_list->first_hop_uri.s) {
             shm_free(ea_list->endpoint_id_str.s);
             shm_free(ea_list);
             SHM_MEM_ERROR;
             return 0;
         }
 
-        memcpy(ea_list->target_uri.s, _target_uri_str, target_uri_len);
-        ea_list->target_uri.len = target_uri_len;
+        memcpy(ea_list->first_hop_uri.s, _first_hop_uri_str, first_hop_uri_len);
+        ea_list->first_hop_uri.len = first_hop_uri_len;
     } else {
-        ea_list->target_uri.s = NULL;
-        ea_list->target_uri.len = 0;
+        ea_list->first_hop_uri.s = NULL;
+        ea_list->first_hop_uri.len = 0;
     }
 
     if (_request_uri_str && request_uri_len > 0) {
         ea_list->request_uri.s = shm_mallocxz((request_uri_len+1)*sizeof(char));
         if (!ea_list->request_uri.s) {
             shm_free(ea_list->endpoint_id_str.s);
-            shm_free(ea_list->target_uri.s);
+            shm_free(ea_list->first_hop_uri.s);
             shm_free(ea_list);
             SHM_MEM_ERROR;
             return 0;
@@ -69,7 +69,7 @@ endpoint_addr_list_t* endpoint_addr_list_block_add(endpoint_addr_list_t **head,
         ea_list->ip_addr.s = shm_mallocxz((ip_addr_len+1)*sizeof(char));
         if (!ea_list->ip_addr.s) {
             shm_free(ea_list->endpoint_id_str.s);
-            shm_free(ea_list->target_uri.s);
+            shm_free(ea_list->first_hop_uri.s);
             shm_free(ea_list->request_uri.s);
             shm_free(ea_list);
             SHM_MEM_ERROR;
@@ -114,8 +114,8 @@ void free_endpoint_addr_list(endpoint_addr_list_t *ea_list) {
         if (ea_list->endpoint_id_str.s) {
             shm_free(ea_list->endpoint_id_str.s);
         }
-        if (ea_list->target_uri.s) {
-            shm_free(ea_list->target_uri.s);
+        if (ea_list->first_hop_uri.s) {
+            shm_free(ea_list->first_hop_uri.s);
         }
         if (ea_list->request_uri.s) {
             shm_free(ea_list->request_uri.s);

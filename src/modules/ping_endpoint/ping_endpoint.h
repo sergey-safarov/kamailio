@@ -13,7 +13,7 @@ int pp_set_endpoint_list_updated(sip_msg_t* _msg, char* updated);
 typedef struct endpoint_addr_list {
     int endpoint_info_id;
     str endpoint_id_str;
-    str target_uri;
+    str first_hop_uri;
     str request_uri;
     str ip_addr;
     int port;
@@ -33,7 +33,7 @@ typedef struct endpoint_info_list {
 endpoint_addr_list_t* endpoint_addr_list_block_add(endpoint_addr_list_t **head,
                                            int endpoint_info_id,
                                            char *_endpoint_id_str, int endpoint_id_str_len,
-                                           char *_target_uri_str, int _target_uri_len,
+                                           char *_first_hop_uri_str, int _first_hop_uri_len,
                                            char *_request_uri_str, int _request_uri_len,
                                            char *_ip_addr_str, int _ip_addr_len,
                                            int port, char proto, int status);
