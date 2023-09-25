@@ -429,6 +429,7 @@ int do_send_ping_option(endpoint_addr_list_t* addr_list)
         return -1;
     }
 
+    //LM_DBG("OPTIONS was successfully sent for: first_hop_uri='%.*s' request_uri='%.*s'\n", addr_list->first_hop_uri.len, addr_list->first_hop_uri.s, addr_list->request_uri.len, addr_list->request_uri.s);
     return 0;
 }
 
@@ -660,7 +661,7 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
 
             while (addr_list) {
                 endpoint_addr_list_t* prev = addr_list;
-                int query_len = strlen(endpoint_addr_insert) + endpoint_id_str_val.len + first_hop_uri_val.len + addr_list->request_uri.len + addr_list->ip_addr.len + 128;
+                int query_len = strlen(endpoint_addr_insert) + endpoint_id_str_val.len + addr_list->first_hop_uri.len + addr_list->request_uri.len + addr_list->ip_addr.len + 128;
                 char *insert_query = pkg_mallocxz(query_len);
                 if (insert_query == NULL) {
                     PKG_MEM_ERROR;
@@ -672,13 +673,14 @@ ticks_t pp_check_timer(ticks_t ticks, struct timer_ln* tl, void* param)
                         endpoint_addr_insert,
                         endpoint_id_val,
                         endpoint_id_str_val.len, endpoint_id_str_val.s,
-                        first_hop_uri_val.len, first_hop_uri_val.s,
+                        addr_list->first_hop_uri.len, addr_list->first_hop_uri.s,
                         addr_list->request_uri.len, addr_list->request_uri.s,
                         addr_list->ip_addr.len, addr_list->ip_addr.s,
                         addr_list->port, addr_list->proto);
 
-                LM_DBG("addr_list addr: '%.*s'; request_uri: '%.*s'; port=%d; proto=%d\n",
+                LM_DBG("addr_list addr='%.*s'; first_hop_uri='%.*s'; request_uri='%.*s'; port=%d; proto=%d\n",
                        addr_list->ip_addr.len, addr_list->ip_addr.s,
+                       addr_list->first_hop_uri.len, addr_list->first_hop_uri.s,
                        addr_list->request_uri.len, addr_list->request_uri.s,
                        addr_list->port, addr_list->proto);
 
