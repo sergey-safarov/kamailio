@@ -1465,6 +1465,9 @@ install -Dpm 0644 pkg/kamailio/%{dist_name}/%{dist_version}/kamailio.service %{b
 install -Dpm 0644 pkg/kamailio/%{dist_name}/%{dist_version}/sipcapture.service %{buildroot}%{_unitdir}/sipcapture.service
 install -Dpm 0644 pkg/kamailio/%{dist_name}/%{dist_version}/kamailio.tmpfiles %{buildroot}%{_tmpfilesdir}/kamailio.conf
 install -Dpm 0644 pkg/kamailio/%{dist_name}/%{dist_version}/sipcapture.tmpfiles %{buildroot}%{_tmpfilesdir}/sipcapture.conf
+%if 0%{?rhel} == 7
+sed -i -e '/RuntimeDirectoryPreserve/d' %{buildroot}%{_unitdir}/kamailio.service
+%endif
 %endif
 
 %if 0%{?suse_version}
