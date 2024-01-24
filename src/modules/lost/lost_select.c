@@ -245,6 +245,12 @@ static int sel_hdrs(str* res, select_t* s, struct sip_msg* msg, char *prps, char
 					l += ts.len;
 					buf[l] = 0;
 					cnt++;
+				} else {
+					if(parse_headers(msg, HDR_CALLINFO_F, 1) < 0)
+					{
+						LM_ERR("error while parsing message headers\n");
+						return -1;
+					}
 				}
 			}
 			posarr[cnt] = buf + strlen(buf);
