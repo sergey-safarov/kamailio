@@ -2870,6 +2870,10 @@ int branch_builder(unsigned int hash_index,
 	return size;
 }
 
+/* the function retrieves the tcp_connetion_id value from the dest_info parameter
+ * if this TCP connection is a haproxy connection, then the haproxy_rcv param is filled with the corresponding
+ *  haproxy data and the function returns non-zero value
+ *  otherwise, if the TCP connection is not a connection to haproxy, then the function returns zero value */
 static int is_haproxy(
 		struct dest_info *send_info, struct receive_info *haproxy_rcv)
 {
@@ -3525,6 +3529,10 @@ int sip_msg_update_buffer(sip_msg_t *msg, str *obuf)
 	msg->id = tmp.id;
 	msg->pid = tmp.pid;
 	msg->rcv = tmp.rcv;
+	if(tmp.haproxy_rcv) {
+		msg->haproxy_rcv = pkg_malloc(sizeof(struct receive_info));
+		memcpy(msg->haproxy_rcv, tmp.haproxy_rcv, sizeof(struct receive_info));
+	}
 	msg->haproxy_rcv = tmp.haproxy_rcv;
 	msg->set_global_address = tmp.set_global_address;
 	msg->set_global_port = tmp.set_global_port;

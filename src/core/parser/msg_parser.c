@@ -824,6 +824,8 @@ void free_sip_msg(struct sip_msg *const msg)
 		free_lump_list(msg->body_lumps);
 	if(msg->reply_lump)
 		free_reply_lump(msg->reply_lump);
+	if(msg->haproxy_rcv)
+		pkg_free(msg->haproxy_rcv);
 	msg_ldata_reset(msg);
 	/* no free of msg->buf -- a pointer to a static buffer */
 }

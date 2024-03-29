@@ -363,7 +363,8 @@ int _receive_msg(char *buf, unsigned int len, receive_info_t *rcv_info,
 	msg->set_global_port = default_global_port;
 
 	if(haproxy_rcv_info) {
-		msg->haproxy_rcv = *haproxy_rcv_info;
+		msg->haproxy_rcv = pkg_malloc(sizeof(struct receive_info));
+		memcpy(msg->haproxy_rcv, haproxy_rcv_info, sizeof(struct receive_info));
 	}
 
 	if(likely(sr_msg_time == 1))

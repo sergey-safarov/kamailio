@@ -408,8 +408,8 @@ int record_route(struct sip_msg *_m, str *params)
 		}
 	} else if(use_ob == 1) {
 		if(rr_obb.encode_flow_token(
-				   &user, _m->rcv.proto_reserved2 ? &_m->haproxy_rcv : &_m->rcv)
-				!= 0) {
+					&user, _m->rcv.proto_reserved2 ? _m->haproxy_rcv : &_m->rcv)
+				 != 0) {
 			LM_ERR("encoding outbound flow-token\n");
 			return -1;
 		}
@@ -548,7 +548,7 @@ int record_route_preset(struct sip_msg *_m, str *_data)
 		}
 	} else if(use_ob == 1) {
 		if(rr_obb.encode_flow_token(
-				   &user, _m->rcv.proto_reserved2 ? &_m->haproxy_rcv : &_m->rcv)
+					&user, _m->rcv.proto_reserved2 ? _m->haproxy_rcv : &_m->rcv) 
 				!= 0) {
 			LM_ERR("encoding outbound flow-token\n");
 			return -1;
@@ -856,7 +856,7 @@ int record_route_advertised_address(struct sip_msg *_m, str *_data)
 		}
 	} else if(use_ob == 1) {
 		if(rr_obb.encode_flow_token(
-				   &user, _m->rcv.proto_reserved2 ? &_m->haproxy_rcv : &_m->rcv)
+					&user, _m->rcv.proto_reserved2 ? _m->haproxy_rcv : &_m->rcv)
 				!= 0) {
 			LM_ERR("encoding outbound flow-token\n");
 			return -1;

@@ -87,7 +87,7 @@ static int handleOutbound(sip_msg_t *_m, str *user, path_param_t *param)
 		struct via_body *via;
 
 		if(path_obb.encode_flow_token(
-				   user, _m->rcv.proto_reserved2 ? &_m->haproxy_rcv : &_m->rcv)
+					user, _m->rcv.proto_reserved2 ? _m->haproxy_rcv : &_m->rcv)
 				!= 0) {
 			LM_ERR("encoding outbound flow-token\n");
 			return -1;
