@@ -1673,12 +1673,6 @@ fi
 %endif
 
 %dir %{_libdir}/kamailio
-%{_libdir}/kamailio/libsrdb1.so.1
-%{_libdir}/kamailio/libsrdb1.so.1.0
-%{_libdir}/kamailio/libsrdb2.so.1
-%{_libdir}/kamailio/libsrdb2.so.1.0
-%{_libdir}/kamailio/libtrie.so.1
-%{_libdir}/kamailio/libtrie.so.1.0
 
 %dir %{_libdir}/kamailio/modules
 %{_libdir}/kamailio/modules/acc.so
