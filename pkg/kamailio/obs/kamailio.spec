@@ -1300,9 +1300,9 @@ xmpp \
   -DRADIUSCLIENT="FREERADIUS" \
   -DINCLUDE_MODULES="${MODULES}"
 
-%{cmake_build}
-%{cmake_build} --target dbschema
-%{cmake_build} --target man
+%__cmake --build "%{__cmake_builddir}"
+%__cmake --build "%{__cmake_builddir}" --target dbschema
+%__cmake --build "%{__cmake_builddir}" --target man
 
 %install
 %{cmake_install}
