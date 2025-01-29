@@ -251,11 +251,17 @@ Conflicts:  kamailio-utils < %ver, kamailio-websocket < %ver
 Conflicts:  kamailio-xhttp-pi < %ver, kamailio-xmlops < %ver
 Conflicts:  kamailio-xmlrpc < %ver, kamailio-xmpp < %ver
 Conflicts:  kamailio-uuid < %ver
-BuildRequires:  bison, flex, which, make, gcc, gcc-c++, pkgconfig, readline-devel
-%if 0%{?rhel} != 6
 Requires:  systemd
 BuildRequires:  systemd-devel
-%endif
+BuildRequires: bison
+BuildRequires: flex
+BuildRequires: which
+BuildRequires: make
+BuildRequires: gcc
+BuildRequires: gcc-c++
+BuildRequires: pkgconfig
+BuildRequires: readline-devel
+BuildRequires: libxslt
 
 %if 0%{?suse_version} == 1315 || 0%{?suse_version} == 1330
 Requires:  filesystem
