@@ -1298,6 +1298,7 @@ xmpp \
   -DBUILD_DOC=ON \
   -DUSE_TLS=ON \
   -DRADIUSCLIENT="FREERADIUS" \
+  -DCMAKE_VERBOSE_MAKEFILE:BOOL=OFF \
   -DINCLUDE_MODULES="${MODULES}"
 
 %__cmake --build "%{__cmake_builddir}"
