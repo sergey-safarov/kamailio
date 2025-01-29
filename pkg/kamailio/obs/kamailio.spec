@@ -1940,7 +1940,6 @@ fi
 %doc %{_docdir}/kamailio/modules/README.ndb_mongodb
 %{_libdir}/kamailio/modules/db_mongodb.so
 %{_libdir}/kamailio/modules/ndb_mongodb.so
-%{_datadir}/kamailio/mongodb/kamailio/acc.json
 %{_datadir}/kamailio/mongodb/kamailio/acc_cdrs.json
 %{_datadir}/kamailio/mongodb/kamailio/acc.json
 %{_datadir}/kamailio/mongodb/kamailio/active_watchers.json
@@ -2022,6 +2021,7 @@ fi
 %{_datadir}/kamailio/mongodb/kamailio/userblocklist.json
 %{_datadir}/kamailio/mongodb/kamailio/usr_preferences.json
 %{_datadir}/kamailio/mongodb/kamailio/version.json
+%{_datadir}/kamailio/mongodb/kamailio/version-create.mongo
 %{_datadir}/kamailio/mongodb/kamailio/watchers.json
 %{_datadir}/kamailio/mongodb/kamailio/xcap.json
 %endif
