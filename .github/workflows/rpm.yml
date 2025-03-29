@@ -1,0 +1,60 @@
+---
+name: build_rpm_nativily
+'on':
+  push:
+    tags:
+    - '[0-9]+.[0-9]+.[0-9]+'
+jobs:
+  build:
+    strategy:
+      matrix:
+        os:
+        - centos-10
+        - rhel-10
+        - centos-9
+        - rhel-9
+        - centos-8
+        - rhel-8
+        runner:
+        - ubuntu-latest
+#        - ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
+    permissions:
+      contents: write
+    steps:
+    - name: checkout sources
+      uses: actions/checkout@v4
+
+    - name: print commit info
+      run: |
+        echo ${{ github.sha }}
+        set
+
+    - name: build rpm files
+      uses: addnab/docker-run-action@v3
+      with:
+        image: safarov/kamailio-builder:${{ matrix.os }}
+        options: -v ${{ github.workspace }}:/usr/src/kamailio
+        run: |
+          cd /usr/src/kamailio
+          make cfg
+          make -C pkg/kamailio src.rpm
+          rpmbuild -ra /usr/src/kamailio/kamailio*.src.rpm
+          cp -R /deps ~/rpmbuild/RPMS
+          mv ~/rpmbuild/SRPMS/* ~/rpmbuild/RPMS
+          mv ~/rpmbuild/RPMS .
+          tar czf kamailio-${{ github.ref_name }}-${{ matrix.os }}-${{ runner.arch }}.rpm.tar.gz RPMS
+
+    - name: Push artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: kamailio-${{ github.ref_name }}-${{ matrix.os }}-${{ runner.arch }}.rpm
+        path: |
+          RPMS/*
+
+    - name: Release
+      uses: softprops/action-gh-release@v2
+      if: startsWith(github.ref, 'refs/tags/')
+      with:
+       files: |
+         kamailio-${{ github.ref_name }}-${{ matrix.os }}-${{ runner.arch }}.rpm.tar.gz
