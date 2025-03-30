@@ -6,6 +6,8 @@ name: build_rpm
   push:
     tags:
     - '[0-9]+.[0-9]+.[0-9]+'
+    branches:
+    - master
 jobs:
   # is required nightly build?
   # More info at https://stackoverflow.com/questions/63014786/how-to-schedule-a-github-actions-nightly-build-but-run-it-only-when-there-where
