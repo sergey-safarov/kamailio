@@ -45,6 +45,7 @@ jobs:
 
     - name: Push artifacts
       uses: actions/upload-artifact@v4
+      if: "! startsWith(github.ref, 'refs/tags/')"
       with:
         name: kamailio-${{ github.ref_name }}-${{ matrix.os }}-${{ runner.arch }}.rpm
         path: |
@@ -52,7 +53,7 @@ jobs:
 
     - name: Release
       uses: softprops/action-gh-release@v2
-      if: startsWith(github.ref, 'refs/tags/')
+      if: "startsWith(github.ref, 'refs/tags/')"
       with:
        files: |
          kamailio-${{ github.ref_name }}-${{ matrix.os }}-${{ runner.arch }}.rpm.tar.gz
