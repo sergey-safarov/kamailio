@@ -50,6 +50,7 @@ jobs:
           mv ~/rpmbuild/RPMS .
           tar czf kamailio-${{ github.ref_name }}-${{ matrix.os }}-${{ runner.arch }}.rpm.tar.gz RPMS
           ls -l /usr/src/kamailio
+          ls -l /usr/src/kamailio
 
     - name: Push artifacts
       uses: actions/upload-artifact@v4
