@@ -46,7 +46,7 @@ jobs:
         - rhel-8
         runner:
         - ubuntu-latest
-#        - ubuntu-24.04-arm
+        - ubuntu-24.04-arm
     runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
