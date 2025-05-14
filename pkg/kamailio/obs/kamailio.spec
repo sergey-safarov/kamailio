@@ -31,42 +31,6 @@
 %bcond_without wolfssl
 %endif
 
-%if 0%{?rhel} == 7
-%if 0%{?centos_ver}
-%define dist_name centos
-%define dist_version %{?centos}
-%define dist .el7.centos
-%endif
-%if 0%{?centos_ver} == 0
-%define dist_name rhel
-%define dist_version %{?rhel}
-%endif
-%bcond_without cnxcc
-%bcond_with dnssec
-%bcond_without evapi
-%bcond_without http_async_client
-%bcond_without ims
-%bcond_without jansson
-%bcond_without json
-%bcond_without lua
-%bcond_without lwsc
-%bcond_without kazoo
-%bcond_without memcached
-%bcond_without mongodb
-%bcond_with nats
-%bcond_without perl
-%bcond_without phonenum
-%bcond_without python2
-%bcond_without python3
-%bcond_without rabbitmq
-%bcond_without redis
-%bcond_without ruby
-%bcond_without sctp
-%bcond_without websocket
-%bcond_without xmlrpc
-%bcond_without wolfssl
-%endif
-
 %if 0%{?rhel} == 8
 %if 0%{?centos_ver}
 %define dist_name centos
