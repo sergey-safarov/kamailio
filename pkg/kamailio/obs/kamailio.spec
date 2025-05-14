@@ -769,13 +769,6 @@ RabbitMQ module for Kamailio.
 Summary:    RADIUS modules for Kamailio
 Group:      %{PKGGROUP}
 Requires:   kamailio = %ver
-%if 0%{?fedora} || 0%{?suse_version} || 0%{?rhel}
-Requires:   freeradius-client
-BuildRequires:  freeradius-client-devel
-%else
-Requires:   radiusclient-ng
-BuildRequires:  radiusclient-ng-devel
-%endif
 
 %description    radius
 RADIUS modules for Kamailio.
@@ -1267,7 +1260,6 @@ xmpp \
 %{cmake} \
   -DBUILD_DOC=ON \
   -DUSE_TLS=ON \
-  -DRADIUSCLIENT="FREERADIUS" \
   -DINCLUDE_MODULES="${MODULES}"
 
 %{cmake_build}
