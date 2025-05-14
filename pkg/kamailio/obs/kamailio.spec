@@ -111,7 +111,7 @@
 %bcond_without mongodb
 %bcond_without nats
 %bcond_without perl
-%bcond_without phonenum
+%bcond_with phonenum
 %bcond_with python2
 %bcond_without python3
 %bcond_without rabbitmq
