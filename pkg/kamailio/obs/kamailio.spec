@@ -82,20 +82,28 @@
 %define dist_name centos
 %define dist_version %{?centos}
 %define dist .el%{?centos_ver}.centos
+%bcond_without nats
+%bcond_without phonenum
 %endif
 %if 0%{?almalinux_ver}
 %define dist_name centos
 %define dist_version %{?almalinux}
 %define dist .el%{?almalinux_ver}.almalinux
+%bcond_without nats
+%bcond_without phonenum
 %endif
 %if 0%{?rocky_ver}
 %define dist_name centos
 %define dist_version %{?rocky}
 %define dist .el%{?rocky_ver}.rocky
+%bcond_without nats
+%bcond_without phonenum
 %endif
 %if 0%{?centos_ver} == 0 && 0%{?almalinux_ver} == 0 && 0%{?rocky_ver} == 0
 %define dist_name rhel
 %define dist_version %{?rhel}
+%bcond_with nats
+%bcond_with phonenum
 %endif
 %bcond_without cnxcc
 %bcond_with dnssec
@@ -109,9 +117,7 @@
 %bcond_without kazoo
 %bcond_without memcached
 %bcond_without mongodb
-%bcond_without nats
 %bcond_without perl
-%bcond_with phonenum
 %bcond_with python2
 %bcond_without python3
 %bcond_without rabbitmq
