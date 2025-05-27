@@ -32,6 +32,7 @@ apk:
 	sed -e "s/^_gitcommit=.*/_gitcommit=${GIT_TAG}/" \
 	    -e "s/^pkgver=.*/pkgver=${APK_VERSION}/" \
 	    -i alpine/APKBUILD
+	apk add busybox-suid
 	cd alpine && su build -c "abuild snapshot"
 	@echo \"abuild\" cannot be started from Makefile please start manually \"cd alpine \&\& su build /usr/bin/abuild\"
 
