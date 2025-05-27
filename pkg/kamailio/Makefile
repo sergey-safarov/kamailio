@@ -32,8 +32,8 @@ apk:
 	sed -e "s/^_gitcommit=.*/_gitcommit=${GIT_TAG}/" \
 	    -e "s/^pkgver=.*/pkgver=${APK_VERSION}/" \
 	    -i alpine/APKBUILD
-	su - build -c "abuild -C ${PWD}/alpine snapshot"
-	@echo \"abuild\" cannot be started from Makefile please start manually \"cd alpine \&\& su build /usr/bin/abuild\"
+	abuild -C alpine snapshot
+	@echo \"abuild\" cannot be started from Makefile please start manually \"/usr/bin/abuild -C alpine\"
 
 # build source rpm package
 .PHONY: src.rpm
