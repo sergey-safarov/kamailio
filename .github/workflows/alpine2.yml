@@ -50,13 +50,13 @@ jobs:
     name: Build sources
     needs: [check]
     if: needs.check.outputs.last_sha != github.sha
-    services:
-      repo:
-        image: nginx
-        ports:
-        - 80
-        volumes:
-        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
+#    services:
+#      repo:
+#        image: nginx
+#        ports:
+#        - 80
+#        volumes:
+#        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
     strategy:
       fail-fast: false
       matrix:
