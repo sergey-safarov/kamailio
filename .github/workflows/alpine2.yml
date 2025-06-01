@@ -79,57 +79,6 @@ jobs:
       run: |
         git log -n 1
 
-    - name: Docker meta
-      id: meta
-      uses: docker/metadata-action@v5
-      with:
-        # list of Docker images to use as base name for tags
-        images: |
-          ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
-        # generate Docker tags based on the following events/attributes
-        tags: |
-          type=pep440,pattern={{version}}
-          type=pep440,pattern={{major}}.{{minor}}
-          type=pep440,pattern={{major}}
-          type=ref,event=branch
-        flavor: |
-          suffix=
-          latest=auto
-
-    - name: Docker meta "-alpine"
-      id: meta-alpine
-      uses: docker/metadata-action@v5
-      with:
-        # list of Docker images to use as base name for tags
-        images: |
-          ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
-        # generate Docker tags based on the following events/attributes
-        tags: |
-          type=pep440,pattern={{version}}
-          type=pep440,pattern={{major}}.{{minor}}
-          type=pep440,pattern={{major}}
-          type=ref,event=branch
-        flavor: |
-          suffix=-alpine
-          latest=false
-
-    - name: Docker meta "-debug"
-      id: meta-debug
-      uses: docker/metadata-action@v5
-      with:
-        # list of Docker images to use as base name for tags
-        images: |
-          ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
-        # generate Docker tags based on the following events/attributes
-        tags: |
-          type=pep440,pattern={{version}}
-          type=pep440,pattern={{major}}.{{minor}}
-          type=pep440,pattern={{major}}
-          type=ref,event=branch
-        flavor: |
-          suffix=-debug
-          latest=false
-
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
       if: "! contains(fromJson('[\"x86_64\", \"aarch64\"]'), matrix.arch)"
@@ -174,6 +123,7 @@ jobs:
           TMP_TAR=/tmp/kamailio_min.tar.gz
           OS_FILELIST=/tmp/os_filelist
           IMG_TAR=kamailio_img.tar.gz
+          ARCH=${uname -m}
 
           install_apk(){
               arch=$(uname -m)
@@ -289,7 +239,7 @@ jobs:
               rm -f $TARLIST $TARLIST.without_os_files
 
               # copy tar archive wuthout os files to result dir
-              doas cp $TMP_TAR.without_os_files /usr/src/kamailio/pkg/docker/alpine/kamailio_min-without_os_files.tar.gz
+              doas cp $TMP_TAR.without_os_files /usr/src/kamailio/pkg/docker/alpine/kamailio_min-without_os_files-${ARCH}.tar.gz
           }
 
           make_image_tar() {
@@ -298,7 +248,7 @@ jobs:
               tar xzf $TMP_TAR
               /bin/busybox --install -s bin
               tar czf /tmp/$IMG_TAR *
-              doas cp /tmp/$IMG_TAR /usr/src/kamailio/pkg/docker/alpine/$IMG_TAR
+              doas cp /tmp/$IMG_TAR /usr/src/kamailio/pkg/docker/alpine/kamailio_img-${ARCH}.tar.gz
           }
 
           install_apk
@@ -316,6 +266,88 @@ jobs:
       run: |
         ls -l ${{ github.workspace }}/pkg/docker/alpine
         find ${{ github.workspace }}/pkg/docker/alpine
+
+  images:
+    name: Build docker images and push
+    needs: [build]
+    if: needs.check.outputs.last_sha != github.sha
+    services:
+      repo:
+        image: nginx
+        ports:
+        - 80
+        volumes:
+        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - x86_64
+        - aarch64
+        include:
+        # setting runner
+        - runner: ubuntu-latest
+        - runner: ubuntu-24.04-arm
+          arch: aarch64
+        # setting image used during build
+        - build_image_tag: ${{ needs.check.outputs.build_image_tag }}
+    runs-on: ${{ matrix.runner }}
+    steps:
+    - name: print info
+      id: init
+      run: |
+        curl -v http://repo:${{ job.services.repo.ports[80] }}/
+
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        # list of Docker images to use as base name for tags
+        images: |
+          ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+        # generate Docker tags based on the following events/attributes
+        tags: |
+          type=pep440,pattern={{version}}
+          type=pep440,pattern={{major}}.{{minor}}
+          type=pep440,pattern={{major}}
+          type=ref,event=branch
+        flavor: |
+          suffix=
+          latest=auto
+
+    - name: Docker meta "-alpine"
+      id: meta-alpine
+      uses: docker/metadata-action@v5
+      with:
+        # list of Docker images to use as base name for tags
+        images: |
+          ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+        # generate Docker tags based on the following events/attributes
+        tags: |
+          type=pep440,pattern={{version}}
+          type=pep440,pattern={{major}}.{{minor}}
+          type=pep440,pattern={{major}}
+          type=ref,event=branch
+        flavor: |
+          suffix=-alpine
+          latest=false
+
+    - name: Docker meta "-debug"
+      id: meta-debug
+      uses: docker/metadata-action@v5
+      with:
+        # list of Docker images to use as base name for tags
+        images: |
+          ghcr.io/${{ github.repository_owner }}/${{ env.IMAGE_NAME }}
+        # generate Docker tags based on the following events/attributes
+        tags: |
+          type=pep440,pattern={{version}}
+          type=pep440,pattern={{major}}.{{minor}}
+          type=pep440,pattern={{major}}
+          type=ref,event=branch
+        flavor: |
+          suffix=-debug
+          latest=false
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
