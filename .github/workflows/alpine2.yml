@@ -144,15 +144,14 @@ jobs:
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
         name: kamailio_builder
-        options: --cap-add chown -v ${{ github.workspace }}:/usr/src/kamailio
+        options: --cap-add chown -v ${{ github.workspace }}:/usr/src/kamailio --entrypoint /bin/sh
         args: |
-          /bin/sh -c "
           cd /usr/src/kamailio
           doas chown -R build:build /usr/src/kamailio
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
-          "
+          mv ~/packages/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
