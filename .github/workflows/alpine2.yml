@@ -53,7 +53,8 @@ jobs:
     services:
       repo:
         image: nginx
-        ports: 80
+        ports:
+        - 80
         volumes:
         - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
     strategy:
