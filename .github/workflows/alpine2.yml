@@ -33,7 +33,7 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Show last execution info
-        name: build_info
+        id: build_info
         run: |
           echo "Last daily build: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}"
           if [ ${{ github.ref_name }} == "master" ]; then
