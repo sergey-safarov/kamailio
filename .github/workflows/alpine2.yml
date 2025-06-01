@@ -158,6 +158,7 @@ jobs:
           abuild -C pkg/kamailio/alpine -r
           doas mkdir -p /usr/src/kamailio/pkg/docker/alpine/apk_files
           doas mv /home/build/packages/kamailio/* /usr/src/kamailio/pkg/docker/alpine/apk_files/
+          doas apk add coreutils
           doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
 
     - name: Build minimal tar files
