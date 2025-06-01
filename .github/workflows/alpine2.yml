@@ -73,6 +73,7 @@ jobs:
       id: init
       run: |
         git log -n 1
+        set
 
     - name: Docker meta
       id: meta
@@ -148,7 +149,7 @@ jobs:
         args: |
           /bin/sh -c "
           cd /usr/src/kamailio
-          doas chown -R build:build *
+          doas chown -R build:build /usr/src/kamailio
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
