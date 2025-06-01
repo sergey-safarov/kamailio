@@ -120,11 +120,10 @@ jobs:
           TMP_TAR=/tmp/kamailio_min.tar.gz
           OS_FILELIST=/tmp/os_filelist
           IMG_TAR=kamailio_img.tar.gz
-          ARCH=${uname -m}
+          ARCH=$(uname -m)
 
           install_apk(){
-              arch=$(uname -m)
-              cd /usr/src/kamailio/pkg/docker/alpine/apk_files/${arch}
+              cd /usr/src/kamailio/pkg/docker/alpine/apk_files/${ARCH}
               ls -1 kamailio-*.apk |  xargs doas apk --no-cache --allow-untrusted add
           }
 
