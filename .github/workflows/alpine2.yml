@@ -27,6 +27,8 @@ jobs:
         id: check_last_run
         with:
           route: GET /repos/{owner}/{repo}/actions/workflows/alpine.yml/runs?per_page=1&status=success
+          owner: ${{ github.repository_owner }}
+          repo: kamailio
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Show last execution info
