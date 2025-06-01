@@ -139,11 +139,12 @@ jobs:
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - uses: addnab/docker-run-action@v3
+    - name: Build sources
+      uses: tj-actions/docker-run@v2
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
         options: -v ${{ github.workspace }}:/usr/src/kamailio --cap-add chown 
-        run: |
+        args: |
           cd /usr/src/kamailio
           chown -R build:build *
           make cfg
