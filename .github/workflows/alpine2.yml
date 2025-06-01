@@ -142,9 +142,10 @@ jobs:
     - uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}:/usr/src/kamailio
+        options: --cap-add chown -v ${{ github.workspace }}:/usr/src/kamailio
         run: |
           cd /usr/src/kamailio
+          chown build:build *
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
