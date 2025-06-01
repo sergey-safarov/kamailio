@@ -50,6 +50,12 @@ jobs:
     name: Build sources
     needs: [check]
     if: needs.check.outputs.last_sha != github.sha
+    services:
+      repo:
+        image: nginx
+        ports: 80/tcp
+        volumes:
+        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
     strategy:
       fail-fast: false
       matrix:
@@ -149,7 +155,6 @@ jobs:
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
-          doas mkdir -p /usr/src/kamailio/pkg/docker/alpine/apk_files
           doas mv /home/build/packages/kamailio/* /usr/src/kamailio/pkg/docker/alpine/apk_files/
           doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
 
@@ -157,6 +162,7 @@ jobs:
       run: |
         ls -l ${{ github.workspace }}/pkg/docker/alpine
         find ${{ github.workspace }}/pkg/docker/alpine
+        curl -v http://repo:${{ job.services.repo.ports[80] }}/
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
