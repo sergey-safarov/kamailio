@@ -64,8 +64,6 @@ jobs:
         # setting image used during build
         - build_image_tag: ${{ needs.check.outputs.build_image_tag }}
     runs-on: ${{ matrix.runner }}
-    permissions:
-      packages: write
     steps:
     - uses: actions/checkout@v4
 
@@ -140,20 +138,25 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build sources
-      uses: tj-actions/docker-run@v2
+      uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
         name: kamailio_builder
         options: --cap-add chown -v ${{ github.workspace }}:/usr/src/kamailio
-        args: |
-          -c "
-          cd /usr/src/kamailio
-          doas chown -R build:build /usr/src/kamailio
+        run: |
+          cp -R /usr/src/kamailio ~
+          cd ~/kamailio
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
-          mv ~/packages/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
-          "
+          doas mkdir -p /usr/src/kamailio/pkg/docker/alpine/apk_files
+          doas mv /hom/build/packages/kamailio/* /usr/src/kamailio/pkg/docker/alpine/apk_files/
+          doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
+
+    - name: list packages
+      run: |
+        ls -l ${{ github.workspace }}/pkg/docker/alpine
+        find ${{ github.workspace }}/pkg/docker/alpine
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
