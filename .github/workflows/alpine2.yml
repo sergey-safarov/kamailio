@@ -143,7 +143,8 @@ jobs:
       uses: tj-actions/docker-run@v2
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}:/usr/src/kamailio --cap-add chown 
+        name: kamailio_builder
+        options: --cap-add chown -v ${{ github.workspace }}:/usr/src/kamailio
         args: |
           cd /usr/src/kamailio
           chown -R build:build *
