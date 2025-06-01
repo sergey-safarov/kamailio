@@ -142,10 +142,9 @@ jobs:
     - uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
+        options: -v ${{ github.workspace }}:/usr/src/kamailio
         run: |
-          echo "hello world"
-          find -name github
-          cd /github/workspace
+          cd /usr/src/kamailio
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
 
