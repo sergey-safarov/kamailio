@@ -27,6 +27,8 @@ jobs:
         id: check_last_run
         with:
           route: GET /repos/{owner}/{repo}/actions/workflows/alpine.yml/runs?per_page=1&status=success
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Show last execution info
         run: |
           echo "Last daily build: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}"
