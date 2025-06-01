@@ -97,7 +97,6 @@ jobs:
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        name: kamailio_builder
         options: -v ${{ github.workspace }}:/usr/src/kamailio
         run: |
           cp -R /usr/src/kamailio ~
@@ -107,14 +106,12 @@ jobs:
           abuild -C pkg/kamailio/alpine -r
           doas mkdir -p /usr/src/kamailio/pkg/docker/alpine/apk_files
           doas mv /home/build/packages/kamailio/* /usr/src/kamailio/pkg/docker/alpine/apk_files/
-          doas apk add coreutils
           doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
 
     - name: Build minimal tar files
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        name: kamailio_builder
         options: -v ${{ github.workspace }}:/usr/src/kamailio
         run: |
           BUILD_ROOT=/tmp/kamailio
@@ -259,7 +256,6 @@ jobs:
           find_binaries
           tar_files
           make_image_tar
-          doas apk add coreutils
           doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine
 
     - name: list packages
