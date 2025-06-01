@@ -150,7 +150,7 @@ jobs:
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
           doas mkdir -p /usr/src/kamailio/pkg/docker/alpine/apk_files
-          doas mv /hom/build/packages/kamailio/* /usr/src/kamailio/pkg/docker/alpine/apk_files/
+          doas mv /home/build/packages/kamailio/* /usr/src/kamailio/pkg/docker/alpine/apk_files/
           doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
 
     - name: list packages
