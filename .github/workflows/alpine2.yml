@@ -13,7 +13,7 @@ on:
 
 env:
   IMAGE_NAME: kamailio-ci
-  BUILDER_IMAGE: sergey-safarov/kamailio-builder
+  BUILDER_IMAGE: gcr.io/sergey-safarov/kamailio-builder
 
 jobs:
   # is required nightly build?
@@ -31,15 +31,20 @@ jobs:
           repo: kamailio
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Show last execution info
+        name: build_info
         run: |
           echo "Last daily build: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}"
-          set
-          echo "is master: ${{ github.ref_name == 'master' }}"
+          if [ ${{ github.ref_name }} == "master" ]; then
+            echo "image_tag=alpine-edge" >> "$GITHUB_OUTPUT"
+          else
+            echo "image_tag=alpine-latest" >> "$GITHUB_OUTPUT"
+          fi
 
     outputs:
       last_sha: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}
-      build-image: ${{ github.ref_name == 'master' }}
+      build_image_tag: ${{ steps.build_info.outputs.image_tag }}
 
   build:
     name: Build sources
@@ -57,7 +62,7 @@ jobs:
         - runner: ubuntu-24.04-arm
           arch: aarch64
         # setting image used during build
-        - os: alpine-latest
+        - build_image_tag: ${{ needs.check.outputs.build_image_tag }}
     runs-on: ${{ matrix.runner }}
     permissions:
       packages: write
@@ -136,8 +141,7 @@ jobs:
 
     - uses: addnab/docker-run-action@v3
       with:
-        registry: gcr.io
-        image: ${{ env.BUILDER_IMAGE }}:${{ matrix.os }}
+        image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
         run: |
           echo "hello world"
           make -C pkg/kamailio apk
