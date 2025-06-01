@@ -145,6 +145,7 @@ jobs:
         options: -v ${{ github.workspace }}:/usr/src/kamailio
         run: |
           cd /usr/src/kamailio
+          make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
 
