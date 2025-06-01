@@ -73,6 +73,9 @@ jobs:
       id: init
       run: |
         git log -n 1
+        pwd
+        ls -la
+        chown -R 1000:1000 ${{ github.workspace }}
 
     - name: Docker meta
       id: meta
