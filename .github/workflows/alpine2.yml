@@ -35,10 +35,11 @@ jobs:
         run: |
           echo "Last daily build: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}"
           set
+          echo "is master: ${{ github.ref_name == 'master' }}"
 
     outputs:
       last_sha: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}
-      build-image: 
+      build-image: ${{ github.ref_name == 'master' }}
 
   build:
     name: Build sources
@@ -136,7 +137,7 @@ jobs:
     - uses: addnab/docker-run-action@v3
       with:
         registry: gcr.io
-        image: ${{ env.BUILDER_IMAGE }}
+        image: ${{ env.BUILDER_IMAGE }}:${{ matrix.os }}
         run: |
           echo "hello world"
           make -C pkg/kamailio apk
