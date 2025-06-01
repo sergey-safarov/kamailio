@@ -146,11 +146,13 @@ jobs:
         name: kamailio_builder
         options: --cap-add chown -v ${{ github.workspace }}:/usr/src/kamailio
         args: |
+          /bin/sh -c "
           cd /usr/src/kamailio
           chown -R build:build *
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
+          "
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
