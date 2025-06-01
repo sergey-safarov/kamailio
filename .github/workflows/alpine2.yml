@@ -308,6 +308,8 @@ jobs:
           find_binaries
           tar_files
           make_image_tar
+          doas apk add coreutils
+          doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine
 
     - name: list packages
       run: |
