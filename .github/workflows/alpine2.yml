@@ -270,14 +270,13 @@ jobs:
   images:
     name: Build docker images and push
     needs: [build]
-    if: needs.check.outputs.last_sha != github.sha
-    services:
-      repo:
-        image: nginx
-        ports:
-        - 80
-        volumes:
-        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
+#    services:
+#      repo:
+#        image: nginx
+#        ports:
+#        - 80
+#        volumes:
+#        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
     strategy:
       fail-fast: false
       matrix:
@@ -290,7 +289,7 @@ jobs:
         - runner: ubuntu-24.04-arm
           arch: aarch64
         # setting image used during build
-        - build_image_tag: ${{ needs.check.outputs.build_image_tag }}
+#        - build_image_tag: ${{ needs.check.outputs.build_image_tag }}
     runs-on: ${{ matrix.runner }}
     steps:
     - name: print info
