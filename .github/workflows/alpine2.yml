@@ -145,7 +145,7 @@ jobs:
         options: --cap-add chown -v ${{ github.workspace }}:/usr/src/kamailio
         run: |
           cd /usr/src/kamailio
-          chown build:build *
+          chown -R build:build *
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
