@@ -144,6 +144,7 @@ jobs:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
         run: |
           echo "hello world"
+          ls -l /
           cd /github/workspace
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
