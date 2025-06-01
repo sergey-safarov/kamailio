@@ -2,18 +2,16 @@
 name: alpine docker image
 on:
   schedule:
-  - cron: '41 3 * * *'
+  - cron: '41 4 * * *'
   push:
     tags:
     - '[0-9]+.[0-9]+.[0-9]+'
-    - 'master'
   # Allows you to run this workflow manually from the Actions tab
   workflow_dispatch:
 
 env:
   IMAGE_NAME: kamailio-ci
-  SOURCE_BRANCH: ${{ github.ref_name }}
-  DOCKER_REPO: kamailio/kamailio-ci
+  BUILDER_IMAGE: sergey-safarov/kamailio-builder
 
 jobs:
   # is required nightly build?
@@ -27,27 +25,42 @@ jobs:
         id: check_last_run
         with:
           route: GET /repos/{owner}/{repo}/actions/workflows/alpine.yml/runs?per_page=1&status=success
-          owner: ${{ github.repository_owner }}
-          repo: kamailio
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - name: Show last execution info
         run: |
           echo "Last daily build: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}"
+          set
+
     outputs:
       last_sha: ${{ fromJson(steps.check_last_run.outputs.data).workflow_runs[0].head_sha }}
-  x86_64:
+      build-image: 
+
+  build:
+    name: Build sources
     needs: [check]
     if: needs.check.outputs.last_sha != github.sha
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch:
+        - x86_64
+        - aarch64
+        include:
+        # setting runner
+        - runner: ubuntu-latest
+        - runner: ubuntu-24.04-arm
+          arch: aarch64
+        # setting image used during build
+        - os: alpine-latest
+    runs-on: ${{ matrix.runner }}
     permissions:
-      contents: read
       packages: write
     steps:
     - uses: actions/checkout@v4
 
-    - name: print latest_commit
-      run: echo ${{ github.sha }}
+    - name: print commit info
+      id: init
+      run: |
+        git log -n 1
 
     - name: Login to GitHub Container Registry
       uses: docker/login-action@v3
@@ -55,13 +68,6 @@ jobs:
         registry: ghcr.io
         username: ${{ github.repository_owner }}
         password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Compile Kamailio source
-      run: |
-        git submodule init
-        git submodule update
-        cd pkg/docker/alpine
-        ./hooks/pre_build || true
 
     - name: Docker meta
       id: meta
@@ -114,67 +120,31 @@ jobs:
           suffix=-debug
           latest=false
 
-    - name: temporal workarround for "-alpine" and "-debug" builds
-      run: |
-        sudo chown -R ${USER}:${USER} ${{ github.workspace }}/pkg/docker/alpine
-        cd pkg/docker/alpine
-        mkdir repackage
-        tar xz --directory=repackage -f kamailio_min-without_os_files.tar.gz
-        rm -f kamailio_min-without_os_files.tar.gz
-        tar cz --directory=repackage -f kamailio_min-without_os_files.tar.gz $(ls -A repackage)
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      if: "! contains(fromJson('[\"x86_64\", \"aarch64\"]'), matrix.arch)"
 
-    - name: Prepare local repo for "-debug" build
-      run: |
-        docker network create kamailio-build
-        docker run \
-               --detach \
-               --network kamailio-build \
-               --name local-repo \
-               --hostname local-repo \
-               --rm=true \
-               --volume=${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro \
-               nginx
-        LOCAL_REPO_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' local-repo)
-        sed -i -e "s/local-repo/${LOCAL_REPO_IP}/" pkg/docker/alpine/Dockerfile.debug
-
-    - name: Create custom builder for "-debug" build
-      id: local-repo
+    - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
-      with:
-        driver-opts: |
-          network=kamailio-build
 
-    - name: Build and push "-debug" build
-      uses: docker/build-push-action@v6
+    - uses: addnab/docker-run-action@v3
       with:
-        context: pkg/docker/alpine
-        file: pkg/docker/alpine/Dockerfile.debug
-        builder: ${{ steps.local-repo.outputs.name }}
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta-debug.outputs.tags }}
-        labels: ${{ steps.meta-debug.outputs.labels }}
+        registry: gcr.io
+        image: ${{ env.BUILDER_IMAGE }}
+        run: |
+          echo "hello world"
+          make -C pkg/kamailio apk
+          abuild -C pkg/kamailio/alpine -r
 
-    - name: Cleanup after "-debug" build
-      run: |
-        docker buildx stop ${{ steps.local-repo.outputs.name }}
-        docker buildx rm ${{ steps.local-repo.outputs.name }}
-        docker stop local-repo
-        docker network rm kamailio-build
-
-    - name: Build and push "-alpine" build
-      uses: docker/build-push-action@v6
-      with:
-        context: pkg/docker/alpine
-        file: pkg/docker/alpine/Dockerfile.alpine
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta-alpine.outputs.tags }}
-        labels: ${{ steps.meta-alpine.outputs.labels }}
-
-    - name: Build and push
-      uses: docker/build-push-action@v6
-      with:
-        context: pkg/docker/alpine
-        file: pkg/docker/alpine/Dockerfile
-        push: ${{ github.event_name != 'pull_request' }}
-        tags: ${{ steps.meta.outputs.tags }}
-        labels: ${{ steps.meta.outputs.labels }}
+#    - name: Build builder image
+#      uses: docker/build-push-action@v6
+#      id: build
+#      env:
+#        DOCKER_BUILD_SUMMARY: false
+#      with:
+#        context: "{{defaultContext}}:rpm"
+#        tags: ${{ steps.metadata.outputs.tags }}
+#        labels: ${{ steps.metadata.outputs.labels }}
+#        platforms: ${{ matrix.platform }}
+#        build-args: |
+#          base_image=${{ matrix.base_image }}
