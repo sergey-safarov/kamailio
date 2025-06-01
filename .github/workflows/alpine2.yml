@@ -13,7 +13,7 @@ on:
 
 env:
   IMAGE_NAME: kamailio-ci
-  BUILDER_IMAGE: gcr.io/sergey-safarov/kamailio-builder
+  BUILDER_IMAGE: ghcr.io/sergey-safarov/kamailio-builder
 
 jobs:
   # is required nightly build?
