@@ -322,7 +322,7 @@ jobs:
       id: init
       run: |
         ARCH=$(uname -m)
-        curl -v http://repo:${{ job.services.repo.ports[80] }}/
+        curl -v http://127.0.0.1:${{ job.services.repo.ports[80] }}/
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
