@@ -327,7 +327,7 @@ jobs:
       id: init
       run: |
         ARCH=$(uname -m)
-        ls -la ${{ github.workspace }}/../../
+        ls -la ${{ github.workspace }}/../../repo
         find ${{ github.workspace }}/../../repo
         curl -s -v http://127.0.0.1:${{ job.services.repo.ports[80] }}/
 
