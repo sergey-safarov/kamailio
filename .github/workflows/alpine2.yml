@@ -50,13 +50,6 @@ jobs:
     name: Build sources
     needs: [check]
     if: needs.check.outputs.last_sha != github.sha
-#    services:
-#      repo:
-#        image: nginx
-#        ports:
-#        - 80
-#        volumes:
-#        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
     strategy:
       fail-fast: false
       matrix:
@@ -257,21 +250,16 @@ jobs:
           make_image_tar
           doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine
 
-    - name: list packages
-      run: |
-        ls -l ${{ github.workspace }}/pkg/docker/alpine
-        find ${{ github.workspace }}/pkg/docker/alpine
-
   images:
     name: Build docker images and push
     needs: [build]
-#    services:
-#      repo:
-#        image: nginx
-#        ports:
-#        - 80
-#        volumes:
-#        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
+    services:
+      repo:
+        image: nginx
+        ports:
+        - 80
+        volumes:
+        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
     strategy:
       fail-fast: false
       matrix:
@@ -284,14 +272,9 @@ jobs:
         - runner: ubuntu-24.04-arm
           arch: aarch64
         # setting image used during build
-#        - build_image_tag: ${{ needs.check.outputs.build_image_tag }}
+        - build_image_tag: ${{ needs.check.outputs.build_image_tag }}
     runs-on: ${{ matrix.runner }}
     steps:
-    - name: print info
-      id: init
-      run: |
-        curl -v http://repo:${{ job.services.repo.ports[80] }}/
-
     - name: Docker meta
       id: meta
       uses: docker/metadata-action@v5
@@ -342,6 +325,19 @@ jobs:
         flavor: |
           suffix=-debug
           latest=false
+
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+      if: "! contains(fromJson('[\"x86_64\", \"aarch64\"]'), matrix.arch)"
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: print info
+      id: init
+      run: |
+        ARCH=$(uname -m)
+        curl -v http://repo:${{ job.services.repo.ports[80] }}/
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
