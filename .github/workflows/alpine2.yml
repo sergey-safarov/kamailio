@@ -90,22 +90,22 @@ jobs:
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}:/usr/src/kamailio
+        options: -v ${{ github.workspace }}:/usr/src/kamailio -v ${{ github.workspace }}/../../repo:/mnt/repo
         run: |
           cp -R /usr/src/kamailio ~
           cd ~/kamailio
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
-          doas mkdir -p /usr/src/kamailio/pkg/docker/alpine/apk_files
-          doas mv /home/build/packages/kamailio/* /usr/src/kamailio/pkg/docker/alpine/apk_files/
-          doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine/apk_files
+          doas mkdir -p /mnt/repo/apk_files
+          doas mv /home/build/packages/kamailio/* /mnt/repo/apk_files/
+          doas chown -R --reference=/usr/src/kamailio /mnt/repo/apk_files
 
     - name: Build minimal tar files
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}:/usr/src/kamailio
+        options: -v ${{ github.workspace }}/../../repo:/mnt/repo
         run: |
           BUILD_ROOT=/tmp/kamailio
           FILELIST=/tmp/filelist
@@ -116,7 +116,7 @@ jobs:
           ARCH=$(uname -m)
 
           install_apk(){
-              cd /usr/src/kamailio/pkg/docker/alpine/apk_files/${ARCH}
+              cd /mnt/repo/apk_files/${ARCH}
               ls -1 kamailio-*.apk |  xargs doas apk --no-cache --allow-untrusted add
           }
 
@@ -228,7 +228,8 @@ jobs:
               rm -f $TARLIST $TARLIST.without_os_files
 
               # copy tar archive wuthout os files to result dir
-              doas cp $TMP_TAR.without_os_files /usr/src/kamailio/pkg/docker/alpine/kamailio_min-without_os_files-${ARCH}.tar.gz
+              doas mkdir /mnt/repo/docker-context/${ARCH}
+              doas cp $TMP_TAR.without_os_files /mnt/repo/docker-context/${ARCH}/kamailio_img-without_os_files.tar.gz
           }
 
           make_image_tar() {
@@ -237,7 +238,7 @@ jobs:
               tar xzf $TMP_TAR
               /bin/busybox --install -s bin
               tar czf /tmp/$IMG_TAR *
-              doas cp /tmp/$IMG_TAR /usr/src/kamailio/pkg/docker/alpine/kamailio_img-${ARCH}.tar.gz
+              doas cp /tmp/$IMG_TAR /mnt/repo/docker-context/${ARCH}/
           }
 
           install_apk
@@ -248,7 +249,9 @@ jobs:
           find_binaries
           tar_files
           make_image_tar
-          doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine
+          doas find /mnt/repo -type f -exec chmod 666 -- {} +
+          doas find /mnt/repo -type d -exec chmod 777 -- {} +
+          doas chown -R root:root /mnt/repo
 
   images:
     name: Build images
@@ -259,7 +262,7 @@ jobs:
         ports:
         - 80
         volumes:
-        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
+        - ${{ github.workspace }}/../../repo:/usr/share/nginx/html:ro
     runs-on: ubuntu-latest
     steps:
     - name: Docker meta
@@ -324,7 +327,7 @@ jobs:
       id: init
       run: |
         ARCH=$(uname -m)
-        set
+        find ${{ github.workspace }}/../../repo
         curl -v http://127.0.0.1:${{ job.services.repo.ports[80] }}/
 
 #    - name: Build builder image
