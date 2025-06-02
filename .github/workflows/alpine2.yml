@@ -90,7 +90,7 @@ jobs:
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}:/usr/src/kamailio -v ${{ github.workspace }}/../../context:/mnt/context
+        options: -v ${{ github.workspace }}:/usr/src/kamailio -v ${{ runner.temp }}/context:/mnt/context
         run: |
           ARCH=$(uname -m)
           cp -R /usr/src/kamailio ~
@@ -106,7 +106,7 @@ jobs:
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}/../../context:/mnt/context
+        options: -v ${{ runner.temp }}/context:/mnt/context
         run: |
           BUILD_ROOT=/tmp/kamailio
           FILELIST=/tmp/filelist
@@ -257,7 +257,7 @@ jobs:
       uses: actions/upload-artifact@v4
       with:
         name: apk-files-and-context-${{ matrix.arch }}
-        path: ${{ github.workspace }}/../../context
+        path: ${{ runner.temp }}/context
 
   images:
     name: Build images
@@ -268,7 +268,7 @@ jobs:
         ports:
         - 80
         volumes:
-        - ${{ github.workspace }}/../..:/usr/share/nginx/html:ro
+        - ${{ runner.temp }}/context:/usr/share/nginx/html:ro
     runs-on: ubuntu-latest
     steps:
     - name: Docker meta
@@ -343,6 +343,7 @@ jobs:
         echo RUNNER.TEMP is ${{ runner.temp }}
         find ${{ runner.temp }}/context
         curl -s -v http://127.0.0.1:${{ job.services.repo.ports[80] }}/
+        find ${{ github.workspace }}
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
