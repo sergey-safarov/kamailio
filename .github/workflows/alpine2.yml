@@ -249,8 +249,8 @@ jobs:
           find_binaries
           tar_files
           make_image_tar
-          doas find /mnt/repo -type f -exec chmod 666 -- {} +
-          doas find /mnt/repo -type d -exec chmod 777 -- {} +
+          doas find /mnt/context -type f -exec chmod 666 -- {} +
+          doas find /mnt/context -type d -exec chmod 777 -- {} +
           doas chown -R root:root /mnt/context
 
     - name: Upload artifacts
