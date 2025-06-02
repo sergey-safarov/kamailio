@@ -251,7 +251,7 @@ jobs:
           doas chown -R --reference=/usr/src/kamailio /usr/src/kamailio/pkg/docker/alpine
 
   images:
-    name: Build docker images and push
+    name: Build images
     needs: [build]
     services:
       repo:
@@ -259,7 +259,7 @@ jobs:
         ports:
         - 80
         volumes:
-        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
+        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html
     runs-on: ubuntu-latest
     steps:
     - name: Docker meta
