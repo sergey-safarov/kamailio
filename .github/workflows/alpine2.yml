@@ -268,7 +268,7 @@ jobs:
         ports:
         - 80
         volumes:
-        - ${{ runner.temp }}/context:/usr/share/nginx/html:ro
+        - ${{ github.workspace }}/context:/usr/share/nginx/html:ro
     runs-on: ubuntu-latest
     steps:
     - name: Docker meta
