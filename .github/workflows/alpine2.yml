@@ -253,6 +253,12 @@ jobs:
           doas find /mnt/repo -type d -exec chmod 777 -- {} +
           doas chown -R root:root /mnt/repo
 
+    - name: print info
+      id: init
+      run: |
+        ls -la ${{ github.workspace }}/../../repo
+        find ${{ github.workspace }}/../../repo
+
   images:
     name: Build images
     needs: [build]
