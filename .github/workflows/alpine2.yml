@@ -90,22 +90,23 @@ jobs:
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}:/usr/src/kamailio -v ${{ github.workspace }}/../../repo:/mnt/repo
+        options: -v ${{ github.workspace }}:/usr/src/kamailio -v ${{ github.workspace }}/../../context:/mnt/context
         run: |
+          ARCH=$(uname -m)
           cp -R /usr/src/kamailio ~
           cd ~/kamailio
           make cfg
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
-          doas mkdir -p /mnt/repo/apk_files
-          doas mv /home/build/packages/kamailio/* /mnt/repo/apk_files/
-          doas chown -R --reference=/usr/src/kamailio /mnt/repo/apk_files
+          doas mkdir -p /mnt/context/${ARCH}/apk_files
+          doas mv /home/build/packages/kamailio/* /mnt/repo/${ARCH}/apk_files/
+          doas chown -R --reference=/usr/src/kamailio /mnt/repo/${ARCH}/apk_files
 
     - name: Build minimal tar files
       uses: addnab/docker-run-action@v3
       with:
         image: ${{ env.BUILDER_IMAGE }}:${{ matrix.build_image_tag }}
-        options: -v ${{ github.workspace }}/../../repo:/mnt/repo
+        options: -v ${{ github.workspace }}/../../context:/mnt/context
         run: |
           BUILD_ROOT=/tmp/kamailio
           FILELIST=/tmp/filelist
@@ -116,8 +117,8 @@ jobs:
           ARCH=$(uname -m)
 
           install_apk(){
-              cd /mnt/repo/apk_files/${ARCH}
-              ls -1 kamailio-*.apk |  xargs doas apk --no-cache --allow-untrusted add
+              cd /mnt/context/${ARCH}/apk_files
+              ls -1 */kamailio-*.apk |  xargs doas apk --no-cache --allow-untrusted add
           }
 
           list_installed_kamailio_packages() {
@@ -228,8 +229,7 @@ jobs:
               rm -f $TARLIST $TARLIST.without_os_files
 
               # copy tar archive wuthout os files to result dir
-              doas mkdir -p /mnt/repo/docker-context/${ARCH}
-              doas cp $TMP_TAR.without_os_files /mnt/repo/docker-context/${ARCH}/kamailio_img-without_os_files.tar.gz
+              doas cp $TMP_TAR.without_os_files /mnt/context/${ARCH}/kamailio_img-without_os_files.tar.gz
           }
 
           make_image_tar() {
@@ -238,7 +238,7 @@ jobs:
               tar xzf $TMP_TAR
               /bin/busybox --install -s bin
               tar czf /tmp/$IMG_TAR *
-              doas cp /tmp/$IMG_TAR /mnt/repo/docker-context/${ARCH}/
+              doas cp /tmp/$IMG_TAR /mnt/context/${ARCH}/
           }
 
           install_apk
@@ -251,12 +251,13 @@ jobs:
           make_image_tar
           doas find /mnt/repo -type f -exec chmod 666 -- {} +
           doas find /mnt/repo -type d -exec chmod 777 -- {} +
-          doas chown -R root:root /mnt/repo
+          doas chown -R root:root /mnt/context
 
-    - name: print info
-      run: |
-        ls -la ${{ github.workspace }}/../../repo
-        find ${{ github.workspace }}/../../repo
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: apk-files-and-context-${{ matrix.arch }}
+        path: ${{ github.workspace }}/../../context
 
   images:
     name: Build images
@@ -267,7 +268,7 @@ jobs:
         ports:
         - 80
         volumes:
-        - ${{ github.workspace }}/../../repo:/usr/share/nginx/html:ro
+        - ${{ github.workspace }}/../..:/usr/share/nginx/html:ro
     runs-on: ubuntu-latest
     steps:
     - name: Docker meta
@@ -328,12 +329,19 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
+    - name: Download artifact images
+      uses: actions/download-artifact@v4
+      with:
+        pattern: apk-files-and-context-*
+        path: ${{ runner.temp }}/context
+        merge-multiple: true
+
     - name: print info
       id: init
       run: |
         ARCH=$(uname -m)
-        ls -la ${{ github.workspace }}/../../repo
-        find ${{ github.workspace }}/../../repo
+        echo RUNNER.TEMP is ${{ runner.temp }}
+        find ${{ runner.temp }}/context
         curl -s -v http://127.0.0.1:${{ job.services.repo.ports[80] }}/
 
 #    - name: Build builder image
