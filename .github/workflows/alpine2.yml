@@ -258,6 +258,8 @@ jobs:
         image: nginx
         ports:
         - 80
+        volumes:
+        - ${{ github.workspace }}/pkg/docker/alpine/apk_files:/usr/share/nginx/html:ro
     runs-on: ubuntu-latest
     steps:
     - name: Docker meta
