@@ -327,8 +327,9 @@ jobs:
       id: init
       run: |
         ARCH=$(uname -m)
+        ls -la ${{ github.workspace }}/../../
         find ${{ github.workspace }}/../../repo
-        curl -v http://127.0.0.1:${{ job.services.repo.ports[80] }}/
+        curl -s -v http://127.0.0.1:${{ job.services.repo.ports[80] }}/
 
 #    - name: Build builder image
 #      uses: docker/build-push-action@v6
