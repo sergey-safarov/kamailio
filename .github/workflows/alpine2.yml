@@ -254,7 +254,6 @@ jobs:
           doas chown -R root:root /mnt/repo
 
     - name: print info
-      id: init
       run: |
         ls -la ${{ github.workspace }}/../../repo
         find ${{ github.workspace }}/../../repo
