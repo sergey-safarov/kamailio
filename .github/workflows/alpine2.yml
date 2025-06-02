@@ -228,7 +228,7 @@ jobs:
               rm -f $TARLIST $TARLIST.without_os_files
 
               # copy tar archive wuthout os files to result dir
-              doas mkdir /mnt/repo/docker-context/${ARCH}
+              doas mkdir -p /mnt/repo/docker-context/${ARCH}
               doas cp $TMP_TAR.without_os_files /mnt/repo/docker-context/${ARCH}/kamailio_img-without_os_files.tar.gz
           }
 
