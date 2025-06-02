@@ -99,8 +99,8 @@ jobs:
           make -C pkg/kamailio apk
           abuild -C pkg/kamailio/alpine -r
           doas mkdir -p /mnt/context/${ARCH}/apk_files
-          doas mv /home/build/packages/kamailio/* /mnt/repo/${ARCH}/apk_files/
-          doas chown -R --reference=/usr/src/kamailio /mnt/repo/${ARCH}/apk_files
+          doas mv /home/build/packages/kamailio/* /mnt/context/${ARCH}/apk_files/
+          doas chown -R --reference=/usr/src/kamailio /mnt/context/${ARCH}/apk_files
 
     - name: Build minimal tar files
       uses: addnab/docker-run-action@v3
