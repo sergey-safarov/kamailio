@@ -57,7 +57,6 @@ jobs:
         arch:
         - x86_64
         - aarch64
-        - x86
         - s390x
         - ppc64le
         - riscv64
@@ -73,8 +72,6 @@ jobs:
           arch: x86_64
         - platform: linux/arm64/v8
           arch: aarch64
-        - platform: linux/386
-          arch: x86
         - platform: linux/s390x
           arch: s390x
         - platform: linux/ppc64le
@@ -390,7 +387,7 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
         annotations: ${{ steps.meta.outputs.annotations }}
-        platforms: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
+        platforms: "linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
         push: true
         file: "context/Dockerfile"
         context: "context"
@@ -403,7 +400,7 @@ jobs:
         tags: ${{ steps.meta-alpine.outputs.tags }}
         labels: ${{ steps.meta-alpine.outputs.labels }}
         annotations: ${{ steps.meta.outputs.annotations }}
-        platforms: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
+        platforms: "linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
         push: true
         file: "context/Dockerfile.alpine"
         context: "context"
@@ -418,7 +415,7 @@ jobs:
         tags: ${{ steps.meta-debug.outputs.tags }}
         labels: ${{ steps.meta-debug.outputs.labels }}
         annotations: ${{ steps.meta.outputs.annotations }}
-        platforms: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
+        platforms: "linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64/v8,linux/ppc64le,linux/riscv64,linux/s390x"
         push: true
         file: "context/Dockerfile.debug"
         context: "context"
