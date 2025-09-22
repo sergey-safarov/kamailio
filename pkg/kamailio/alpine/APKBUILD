@@ -84,6 +84,7 @@ _makedepends_testing="dnssec-tools-dev
 
 source="kamailio-${pkgver}$_suffix.tar.gz::https://github.com/sergey-safarov/kamailio/archive/$_gitcommit.tar.gz
 	kamailio.initd
+	kamailio.pre-install
 	"
 
 install="$pkgname.pre-install $pkgname.pre-upgrade"
