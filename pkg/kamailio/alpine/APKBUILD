@@ -9,7 +9,7 @@ pkgrel=0
 
 # If building from a git snapshot, specify the gitcommit
 # If building a proper release, leave gitcommit blank or commented
-_gitcommit=991fe9b28e0e201309048f3b38a135037e40357a
+#_gitcommit=991fe9b28e0e201309048f3b38a135037e40357a
 
 [ ! -z "${_gitcommit}" ] && pkgver="${pkgver}.$(date +%Y%m%d)"
 [ ! -z "${_gitcommit}" ] && _suffix="-${_gitcommit:0:7}"
