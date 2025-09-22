@@ -100,7 +100,7 @@ jobs:
 
     - name: Set up QEMU
       uses: docker/setup-qemu-action@v3
-      if: "! contains(fromJson('[\"x86\", \"x86_64\", \"aarch64\"]'), matrix.arch)"
+      if: "! contains(fromJson('[\"x86_64\", \"aarch64\"]'), matrix.arch)"
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
