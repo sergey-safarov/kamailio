@@ -28,10 +28,6 @@ tar:
 # build alpine apk packages
 .PHONY: apk
 apk:
-	echo Building alpine packages using commit ${GIT_TAG}
-	sed -e "s/^_gitcommit=.*/_gitcommit=${GIT_TAG}/" \
-	    -e "s/^pkgver=.*/pkgver=${APK_VERSION}/" \
-	    -i alpine/APKBUILD
 	abuild -C alpine snapshot
 	@echo \"abuild\" cannot be started from Makefile please start manually \"abuild -C alpine -r\"
 
