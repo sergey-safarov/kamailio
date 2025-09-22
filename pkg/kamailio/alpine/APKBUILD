@@ -541,7 +541,7 @@ get_source_from_github(){
 
 snapshot() {
 	if [ ! -f "$SRCDEST"/${pkgname}-${pkgver}${_suffix}.tar.gz ]; then
-		get_source_from_local_git || get_source_from_github
+		get_source_from_github
 	fi
 	SHA512SUM=$(sha512sum "$SRCDEST"/${pkgname}-${pkgver}${_suffix}.tar.gz | sed -e "s:${SRCDEST}/::")
 	sed -i -e "s/^\(sha512sums=.\).*/\1$SHA512SUM/" APKBUILD
