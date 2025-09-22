@@ -5,12 +5,12 @@
 # Maintainer: Nathan Angelacos <nangel@alpinelinux.org>
 
 pkgname=kamailio
-pkgver=6.0.2
+pkgver=6.1.0
 pkgrel=6
 
 # If building from a git snapshot, specify the gitcommit
 # If building a proper release, leave gitcommit blank or commented
-#_gitcommit=015efa305c2c7822e64383c6a98de9addd41add7
+_gitcommit=8c99a9c733f687b0f6ebfdae4465f931bf7f4a2a
 
 [ -n "$_gitcommit" ] && pkgver="$pkgver.$(date +%Y%m%d)"
 [ -n "$_gitcommit" ] && _suffix="-${_gitcommit:0:7}"
@@ -82,7 +82,7 @@ _makedepends_testing="dnssec-tools-dev
 	secsipidx
 	"
 
-source="kamailio-${pkgver}$_suffix.tar.gz::https://github.com/kamailio/kamailio/archive/$_gitcommit.tar.gz
+source="kamailio-${pkgver}$_suffix.tar.gz::https://github.com/sergey-safarov/kamailio/archive/$_gitcommit.tar.gz
 	kamailio.initd
 	"
 
@@ -535,7 +535,7 @@ get_source_from_local_git(){
 
 get_source_from_github(){
 	echo Cannot create archive using local git repo. Trying create source from GutHub.
-	wget -O "$SRCDEST"/${pkgname}-${pkgver}${_suffix}.tar.gz https://github.com/kamailio/$pkgname/archive/${_gitcommit}.tar.gz || return 1
+	wget -O "$SRCDEST"/${pkgname}-${pkgver}${_suffix}.tar.gz https://github.com/sergey-safarov/$pkgname/archive/${_gitcommit}.tar.gz || return 1
 	echo Created dist archive "$SRCDEST"/${pkgname}-${pkgver}${_suffix}.tar.gz
 }
 
@@ -899,6 +899,6 @@ gcrypt() {
 
 
 sha512sums="
-5aa9dec9055b0ba994d467c0e99c1160d83bcd0ebc325f77253feac4b208b987046f8857e6765b834bbb0713d1632b42e1ffe08f541f662b88905afb5a7ef239  kamailio-6.0.2.20250901-015efa3.tar.gz
+bcdb7906655779ff057358cb7fcf61d9ebe86f817a5598d26a0b584ce5f563035002b230da16014f9c273a01af8772ff16570c285907d9664495fde399bceca0  kamailio-6.1.0.20250922-8c99a9c.tar.gz
 38a786b48d433b2e99a29249458c1ffcc3f449a1898df6ef1f4b8ebf7770e99d80ce6e3340ea680b44e725b951e65fd06d395ecb903600d7c8fdc0a736c4d9b1  kamailio.initd
 "
