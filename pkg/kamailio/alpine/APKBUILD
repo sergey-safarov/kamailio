@@ -34,6 +34,7 @@ makedepends="bison
 	flex
 	freeradius-client-dev
 	hiredis-dev
+	hiredis-ssl
 	icu-dev
 	jansson-dev
 	json-c-dev
