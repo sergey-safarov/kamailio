@@ -10,7 +10,7 @@ pkgrel=6
 
 # If building from a git snapshot, specify the gitcommit
 # If building a proper release, leave gitcommit blank or commented
-_gitcommit=316ea8925edd0c401c121e9dc0f21dde3a2c6598
+_gitcommit=829dce8e9de586f1269be2f58f9a7f58cc81e2b1
 
 [ -n "$_gitcommit" ] && pkgver="$pkgver.$(date +%Y%m%d)"
 [ -n "$_gitcommit" ] && _suffix="-${_gitcommit:0:7}"
@@ -899,6 +899,6 @@ gcrypt() {
 }
 
 
-sha512sums="5627c36efaf0a398a9e70a8bc053aadba2aff3837bf93ee9b99331cd88c86249b9dc2f2b7fda444fffd79a8097788fc1206839b7dd133707fada74371c2642ca  kamailio-6.1.0.20250927-316ea89.tar.gz
+sha512sums="9d39101623f6c725b435e07aecf200cdf751b4d31d9ea7c6b2bc66af711d46a91fb917d2bf1f5c6932caa4e802c4aaa2da2144c24ccc086fa91a90b451602ce6  kamailio-6.1.0.20250927-829dce8.tar.gz
 38a786b48d433b2e99a29249458c1ffcc3f449a1898df6ef1f4b8ebf7770e99d80ce6e3340ea680b44e725b951e65fd06d395ecb903600d7c8fdc0a736c4d9b1  kamailio.initd
 "
