@@ -50,6 +50,18 @@ MODULE_VERSION
 
 #define OB_KEY_LEN 20
 
+typedef enum check_flow_retcode
+{
+	CHECK_FLOW_ERROR_ROUTE_PARSE = -6,
+	CHECK_FLOW_EXPIRED,
+	CHECK_FLOW_NO_TCP_CONNECTION,
+	CHECK_FLOW_ERROR_DECODE,
+	CHECK_FLOW_ERROR_URI_NOT_MYSELF,
+	CHECK_FLOW_ERROR_NO_FLOW_TOKEN,
+	CHECK_FLOW_NO_ROUTE_HEADER,
+	CHECK_FLOW_SUCCESS
+} check_flow_retcode_t;
+
 static int mod_init(void);
 static void destroy(void);
 
@@ -58,9 +70,12 @@ static unsigned int ob_force_no_flag = (unsigned int)-1;
 static str ob_key = {0, 0};
 static str flow_token_secret = {0, 0};
 
+static int w_check_flow_token(struct sip_msg *msg, char *p1, char *p2);
+
 /* clang-format off */
 static cmd_export_t cmds[] = {
 	{"bind_ob", (cmd_function)bind_ob, 1, 0, 0, 0},
+	{"check_flow_token", (cmd_function)w_check_flow_token, 0, 0, 0, REQUEST_ROUTE},
 	{0, 0, 0, 0, 0, 0}
 };
 
@@ -502,4 +517,128 @@ int bind_ob(struct ob_binds *pxb)
 	pxb->use_outbound = use_outbound;
 
 	return 0;
+}
+
+/*!
+ * \brief Check if URI is myself
+ * \param _host host
+ * \param _port port
+ * \return 0 if the URI is not myself, 1 otherwise
+ */
+static inline int is_myself(sip_uri_t *_puri)
+{
+	int ret;
+
+	if(_puri->host.len == 0) {
+		/* catch uri without host (e.g., tel uri) */
+		return 0;
+	}
+
+	ret = check_self(&_puri->host, _puri->port_no ? _puri->port_no : SIP_PORT,
+			0); /* match all protos*/
+	if(ret < 0)
+		return 0;
+
+#ifdef ENABLE_USER_CHECK
+	if(ret == 1 && i_user.len && i_user.len == _puri->user.len
+			&& strncmp(i_user.s, _puri->user.s, _puri->user.len) == 0) {
+		LM_DBG("ignore user matched - URI is not to the server itself\n");
+		return 0;
+	}
+#endif
+
+	if(ret == 1) {
+		/* match on host:port, but if gruu, then fail */
+		if(_puri->gr.s != NULL)
+			return 0;
+	}
+
+	return ret;
+}
+
+/*!
+ * \brief Parse the message and find first occurrence of Route header field.
+ * \param _m SIP message
+ * \return -1 or -2 on a parser error, 0 if there is a Route HF and 1 if there is no Route HF
+ */
+static inline int find_first_route(struct sip_msg *_m)
+{
+	if(parse_headers(_m, HDR_ROUTE_F, 0) == -1) {
+		LM_ERR("failed to parse headers\n");
+		return -1;
+	} else {
+		if(_m->route) {
+			if(parse_rr(_m->route) < 0) {
+				LM_ERR("failed to parse Route HF\n");
+				return -2;
+			}
+			return 0;
+		} else {
+			LM_DBG("No Route headers found\n");
+			return 1;
+		}
+	}
+}
+
+int check_flow_token(struct sip_msg *msg)
+{
+	struct hdr_field *hdr;
+	struct sip_uri puri;
+	rr_t *rt;
+	str uri;
+	int uri_is_myself;
+
+	if(find_first_route(msg) != 0) {
+		LM_DBG("There is no Route HF\n");
+		return CHECK_FLOW_NO_ROUTE_HEADER;
+	}
+
+	hdr = msg->route;
+	rt = (rr_t *)hdr->parsed;
+	uri = rt->nameaddr.uri;
+
+	if(parse_uri(uri.s, uri.len, &puri) < 0) {
+		LM_ERR("failed to parse the first route URI (%.*s)\n", uri.len,
+				ZSW(uri.s));
+		return CHECK_FLOW_ERROR_ROUTE_PARSE;
+	}
+
+	uri_is_myself = is_myself(&puri);
+
+	/* IF the URI was added by me, remove it */
+	if(uri_is_myself > 0) {
+		int ret;
+		struct receive_info *rcv = NULL;
+
+		LM_DBG("Topmost route URI: '%.*s' is me\n", uri.len, ZSW(uri.s));
+
+		ret = decode_flow_token(msg, &rcv, puri.user);
+
+		if(ret == -2) {
+			LM_DBG("no flow token found\n");
+			return CHECK_FLOW_ERROR_NO_FLOW_TOKEN;
+		} else if(ret == -1) {
+			LM_DBG("failed to decode flow token\n");
+			return CHECK_FLOW_ERROR_DECODE;
+		} else {
+			tcp_connection_t *con = tcpconn_get(0, &rcv->src_ip, rcv->src_port, NULL, 0);
+
+			if(!con) {
+				LM_DBG("TCP connection to %s:%d does not exists\n", ip_addr2a(&rcv->src_ip), rcv->src_port);
+				return CHECK_FLOW_NO_TCP_CONNECTION;
+			}
+			tcpconn_put(con);
+			return CHECK_FLOW_SUCCESS;
+		}
+	}
+
+	return CHECK_FLOW_ERROR_URI_NOT_MYSELF;
+}
+
+/**
+ * wrapper for check_flow_token(msg)
+ */
+static int w_check_flow_token(struct sip_msg *msg, char *p1, char *p2)
+{
+	return check_flow_token(msg);
 }
