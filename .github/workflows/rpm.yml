@@ -125,7 +125,7 @@ jobs:
     - name: build rpm files
       uses: addnab/docker-run-action@v3
       with:
-        image: ghcr.io/sergey-safarov/pkg-kamailio-docker:${{ matrix.os }}
+        image: ghcr.io/sergey-safarov/kamailio-builder:${{ matrix.os }}
         options: --platform ${{ matrix.platform }} -v ${{ github.workspace }}:/usr/src/kamailio
         run: |
           cd /usr/src/kamailio
