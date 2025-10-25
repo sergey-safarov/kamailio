@@ -56,9 +56,9 @@ typedef enum check_flow_retcode
 	CHECK_FLOW_EXPIRED,
 	CHECK_FLOW_NO_TCP_CONNECTION,
 	CHECK_FLOW_ERROR_DECODE,
-	CHECK_FLOW_ERROR_URI_NOT_MYSELF,
 	CHECK_FLOW_ERROR_NO_FLOW_TOKEN,
-	CHECK_FLOW_NO_ROUTE_HEADER,
+	CHECK_FLOW_ERROR_URI_NOT_MYSELF,
+	CHECK_FLOW_NO_ROUTE_HEADER = 1,
 	CHECK_FLOW_SUCCESS
 } check_flow_retcode_t;
 
@@ -605,7 +605,7 @@ int check_flow_token(struct sip_msg *msg)
 
 	uri_is_myself = is_myself(&puri);
 
-	/* IF the URI was added by me, remove it */
+	/* If the URI was added by me, remove it */
 	if(uri_is_myself > 0) {
 		int ret;
 		struct receive_info *rcv = NULL;
