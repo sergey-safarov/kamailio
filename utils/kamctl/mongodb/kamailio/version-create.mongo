@@ -28,6 +28,7 @@ db.getCollection("version").insert({ table_name: "dr_rules", table_version: Numb
 db.getCollection("version").insert({ table_name: "globalblocklist", table_version: NumberInt(1) });
 db.getCollection("version").insert({ table_name: "grp", table_version: NumberInt(2) });
 db.getCollection("version").insert({ table_name: "htable", table_version: NumberInt(2) });
+db.getCollection("version").insert({ table_name: "flowtoken", table_version: NumberInt(2) });
 db.getCollection("version").insert({ table_name: "imc_members", table_version: NumberInt(1) });
 db.getCollection("version").insert({ table_name: "imc_rooms", table_version: NumberInt(1) });
 db.getCollection("version").insert({ table_name: "impu", table_version: NumberInt(6) });
