@@ -32,16 +32,20 @@
 #include "../../core/basex.h"
 #include "../../core/dprint.h"
 #include "../../core/dset.h"
+#include "../../core/events.h"
 #include "../../core/forward.h"
 #include "../../core/ip_addr.h"
 #include "../../core/mod_fix.h"
 #include "../../core/sr_module.h"
 #include "../../core/counters.h"
 #include "../../core/parser/contact/parse_contact.h"
+#include "../../core/parser/parse_addr_spec.h"
+#include "../../core/parser/parse_from.h"
 #include "../../core/parser/parse_expires.h"
 #include "../../core/parser/parse_rr.h"
 #include "../../core/parser/parse_uri.h"
 #include "../../core/parser/parse_supported.h"
+#include "../htable/api.h"
 
 #include "api.h"
 #include "config.h"
@@ -49,6 +53,7 @@
 MODULE_VERSION
 
 #define OB_KEY_LEN 20
+#define OB_STR_BUF_LEN 256
 
 typedef enum check_flow_retcode
 {
@@ -66,10 +71,20 @@ typedef enum check_flow_retcode
 static int mod_init(void);
 static void destroy(void);
 
+int outbound_net_data_recv(sr_event_param_t *evp);
+
+static unsigned int enable_flow_token_cache = 0;
 static unsigned int ob_force_flag = (unsigned int)-1;
 static unsigned int ob_force_no_flag = (unsigned int)-1;
+static unsigned int htable_guard_time = 840;
 static str ob_key = {0, 0};
 static str flow_token_secret = {0, 0};
+static str htable_flowtoken_name = str_init("flowtoken");
+
+static str ob_htable_flowtoken_spec_str = {
+		"flowtoken=>size=8;dbmode=1;dbtable=flowtoken;coldelim=';';dmqreplicate=1;", 78};
+
+static htable_api_t htable_api;
 
 static int w_check_flow_token(struct sip_msg *msg, char *p1, char *p2);
 
@@ -84,6 +99,9 @@ static param_export_t params[] = {
 	{"force_outbound_flag", PARAM_INT, &ob_force_flag},
 	{"force_no_outbound_flag", PARAM_INT, &ob_force_no_flag},
 	{"flow_token_secret", PARAM_STR, &flow_token_secret},
+	{"htable_flowtoken_spec", PARAM_STR, &ob_htable_flowtoken_spec_str},
+	{"htable_guard_time", PARAM_INT, &htable_guard_time},
+	{"enable_flow_token_cache", PARAM_INT, &enable_flow_token_cache},
 	{0, 0, 0}
 };
 
@@ -149,9 +167,29 @@ static int mod_init(void)
 	}
 	default_outbound_cfg.outbound_active = 1;
 
+	sr_event_register_cb(SREV_NET_DATA_RECV, outbound_net_data_recv);
+
 	if(!module_loaded("stun")) {
 		LM_WARN("\"stun\" module is not loaded. STUN is required to use"
 				" outbound with UDP.\n");
+	}
+
+	if(enable_flow_token_cache) {
+		if(htable_load_api(&htable_api) < 0) {
+			LM_ERR("htable module not found\n");
+			return -1;
+		}
+		LM_DBG("loaded htable api\n");
+
+		if(htable_api.table_spec(ob_htable_flowtoken_spec_str.s) < 0) {
+			LM_ERR("failed table spec for flowtoken hash table\n");
+			return -1;
+		}
+
+		if(htable_api.init_tables() < 0) {
+			LM_ERR("failed init flowtoken table\n");
+			return -1;
+		}
 	}
 
 	return 0;
@@ -520,6 +558,67 @@ int bind_ob(struct ob_binds *pxb)
 	return 0;
 }
 
+static int is_flow_token_exired(str *flow_token_str)
+{
+	ht_cell_t *cell = NULL;
+	char value_buf[4 * OB_STR_BUF_LEN] = {0};
+	int semicolon_count = 0;
+	char *ptr = value_buf;
+	time_t reg_expires_timestamp;
+	time_t now;
+
+	if(!flow_token_str || !flow_token_str->len || !flow_token_str->s) {
+		return -2;
+	}
+
+	cell = htable_api.get_clone(&htable_flowtoken_name, flow_token_str);
+	if(cell == NULL) {
+		LM_DBG("flowtoken %.*s not found\n", flow_token_str->len,
+				flow_token_str->s);
+		return -2;
+	}
+
+	if(!cell->value.s.len || !cell->value.s.s) {
+		pkg_free(cell);
+		LM_ERR("flowtoken %.*s value is empty\n", flow_token_str->len,
+				flow_token_str->s);
+		return -2;
+	}
+
+	strncpy(value_buf, cell->value.s.s, cell->value.s.len);
+
+	while(*ptr != '\0') {
+		if(*ptr == ';') {
+			++semicolon_count;
+			if(semicolon_count == 3) {
+				++ptr;
+				break;
+			}
+		}
+		++ptr;
+	}
+
+	if(semicolon_count != 3) {
+		pkg_free(cell);
+		LM_ERR("flowtoken %.*s value format is incorrect: %s\n",
+				flow_token_str->len, flow_token_str->s, value_buf);
+		return -2;
+	}
+
+	reg_expires_timestamp = (time_t)strtoll(ptr, NULL, 10);
+	now = time(NULL);
+
+	pkg_free(cell);
+
+	if(reg_expires_timestamp < now) {
+		LM_DBG("flowtoken %.*s is expired\n", flow_token_str->len,
+				flow_token_str->s);
+		return -1;
+	}
+
+	return 1;
+}
+
 int check_flow_token(struct sip_msg *msg)
 {
 	struct hdr_field *hdr;
@@ -577,6 +676,11 @@ int check_flow_token(struct sip_msg *msg)
 			return CHECK_FLOW_NO_TCP_CONNECTION;
 		}
 		tcpconn_put(con);
+
+		if(is_flow_token_exired(&puri.user) == -1) {
+			return CHECK_FLOW_EXPIRED;
+		}
+
 		return CHECK_FLOW_SUCCESS;
 	} else if(rcv->proto == PROTO_UDP) {
 		return CHECK_FLOW_SUCCESS;
@@ -592,4 +696,258 @@ int check_flow_token(struct sip_msg *msg)
 static int w_check_flow_token(struct sip_msg *msg, char *p1, char *p2)
 {
 	return check_flow_token(msg);
+}
+
+static int ob_parse_path(sip_msg_t *msg, char *path)
+{
+	rr_t *route = NULL;
+	struct sip_uri path_puri;
+	int _is_myself;
+	param_hooks_t path_hooks;
+	param_t *params;
+
+	if(!msg || !path) {
+		return -1;
+	}
+
+	if(parse_headers(msg, HDR_PATH_F, 0) == -1 || msg->path == NULL
+			|| !msg->path->len) {
+		LM_ERR("Failed to parse Path header\n");
+		return -1;
+	}
+
+	if(parse_rr_body(msg->path->body.s, msg->path->body.len, &route) < 0) {
+		LM_ERR("Failed to parse Path: header body\n");
+		return -1;
+	}
+
+	if(parse_uri(route->nameaddr.uri.s, route->nameaddr.uri.len, &path_puri)
+			< 0) {
+		LM_ERR("Failed to parse Path: URI\n");
+		free_rr(&route);
+		return -1;
+	}
+
+	_is_myself = check_self(&path_puri.host,
+			path_puri.port_no ? path_puri.port_no : SIP_PORT, 0);
+	if(_is_myself < 1) {
+		LM_DBG("top Route-URI is not me - skip flow token store\n");
+		free_rr(&route);
+		return -1;
+	}
+
+	if(parse_params(&path_puri.params, CLASS_URI, &path_hooks, &params) != 0) {
+		LM_ERR("error parsing Route-URI parameters\n");
+		free_rr(&route);
+		return -1;
+	}
+	/* Not interested in param body - just the hooks */
+	free_params(params);
+
+	if(!path_hooks.uri.ob) {
+		LM_DBG("not found ;ob parameter on Path\n");
+		free_rr(&route);
+		return -1;
+	}
+
+	LM_DBG("found ;ob parameter on Path\n");
+
+	if(!path_hooks.uri.lr) {
+		LM_DBG("not found ;lr parameter on Path\n");
+		free_rr(&route);
+		return -1;
+	}
+	LM_DBG("found ;lr parameter on Path\n");
+
+	strncpy(path, path_puri.user.s, path_puri.user.len);
+
+	return 0;
+}
+
+static int ob_parse_contact(
+		sip_msg_t *msg, char *instance_id, char *reg_id, int *expires)
+{
+	int header_parsed_ok = -1;
+	contact_t *contact;
+	char expires_buf[OB_STR_BUF_LEN] = {0};
+
+	if(!msg || !instance_id || !reg_id || !expires) {
+		return -1;
+	}
+
+	header_parsed_ok =
+			msg->contact
+			|| (parse_headers(msg, HDR_CONTACT_F, 0) != -1 && msg->contact);
+	if(!header_parsed_ok) {
+		LM_DBG("no Contact header\n");
+		return -1;
+	}
+
+	if(parse_contact(msg->contact) < 0) {
+		LM_ERR("parsing Contact: header body\n");
+		return -1;
+	}
+
+	contact = ((contact_body_t *)msg->contact->parsed)->contacts;
+	if(!contact) {
+		LM_ERR("empty Contact header\n");
+		return -1;
+	}
+
+	if(!contact->instance || !contact->instance->body.len
+			|| !contact->instance->body.s) {
+		LM_DBG("not found ;+sip.instance parameter on Contact-URI\n");
+		return -1;
+	}
+
+	LM_DBG("found ;+sip.instance parameter on Contact-URI; "
+		   "sip.instance='%.*s'\n",
+			contact->instance->body.len, contact->instance->body.s);
+
+	strncpy(instance_id, contact->instance->body.s,
+			contact->instance->body.len);
+
+	if(!contact->reg_id || !contact->reg_id->body.len
+			|| !contact->reg_id->body.s) {
+		LM_DBG("not found ;reg-id parameter on Contact-URI\n");
+		return -1;
+	}
+
+	LM_DBG("found ;reg-id parameter on Contact-URI reg-id='%.*s'\n",
+			contact->reg_id->body.len, contact->reg_id->body.s);
+	strncpy(reg_id, contact->reg_id->body.s, contact->reg_id->body.len);
+
+	if(!contact->expires || !contact->expires->body.len
+			|| !contact->expires->body.s) {
+		LM_DBG("not found ;expires parameter on Contact-URI\n");
+		return -1;
+	}
+
+	strncpy(expires_buf, contact->expires->body.s, contact->expires->body.len);
+	*expires = atoi(expires_buf);
+	LM_DBG("found ;expires parameter expires='%d'\n", *expires);
+
+	return 0;
+}
+
+static int ob_parse_from(sip_msg_t *msg, char *from_buf)
+{
+	to_body_t *xfrom;
+
+	if(!msg || !from_buf) {
+		return -1;
+	}
+
+	if(parse_from_header(msg) < 0) {
+		LM_ERR("cannot parse From header\n");
+		return -1;
+	}
+
+	if(get_from(msg) == NULL) {
+		LM_ERR("no From header\n");
+		return -1;
+	}
+
+	xfrom = get_from(msg);
+
+	strncpy(from_buf, xfrom->uri.s, xfrom->uri.len);
+
+	return 0;
+}
+
+int outbound_net_data_recv(sr_event_param_t *evp)
+{
+	sr_net_info_t *nd;
+	sip_msg_t tmsg;
+	int ret = -1;
+	int len;
+
+	int_str hash_value_str;
+	str flow_token_str = STR_NULL;
+	char hash_value_buf[4 * OB_STR_BUF_LEN] = {0};
+	char flow_token_buf[OB_STR_BUF_LEN] = {0};
+	char contact_instance_id_buf[OB_STR_BUF_LEN] = {0};
+	char contact_reg_id_buf[OB_STR_BUF_LEN] = {0};
+	char from_buf[OB_STR_BUF_LEN] = {0};
+	char timestamp_buf[OB_STR_BUF_LEN] = {0};
+	int expires = -1;
+	int_str expires_val;
+	time_t reg_timestamp;
+
+	if(evp->data == NULL) {
+		return -1;
+	}
+
+	nd = (sr_net_info_t *)evp->data;
+	if(nd->rcv == NULL || nd->data.s == NULL || nd->data.len <= 0) {
+		return -1;
+	}
+
+	memset(&tmsg, 0, sizeof(sip_msg_t));
+	tmsg.buf = nd->data.s;
+	tmsg.len = nd->data.len;
+
+	if(parse_msg(tmsg.buf, tmsg.len, &tmsg) != 0) {
+		LM_DBG("msg buffer parsing failed!\n");
+		return -1;
+	}
+
+	if(!IS_SIP_REPLY(&tmsg) || tmsg.first_line.u.reply.statuscode != 200) {
+		free_sip_msg(&tmsg);
+		return 0;
+	}
+
+	if(ob_parse_path(&tmsg, flow_token_buf) < 0) {
+		free_sip_msg(&tmsg);
+		return 1;
+	}
+
+	if(ob_parse_contact(
+			   &tmsg, contact_instance_id_buf, contact_reg_id_buf, &expires)
+			< 0) {
+		free_sip_msg(&tmsg);
+		return -1;
+	}
+
+	if(ob_parse_from(&tmsg, from_buf) < 0) {
+		free_sip_msg(&tmsg);
+		return -1;
+	}
+
+	reg_timestamp = time(NULL) + expires;
+	snprintf(timestamp_buf, sizeof(timestamp_buf), "%lld",
+			(long long)reg_timestamp);
+	len = strlen(flow_token_buf) + strlen(from_buf)
+		  + strlen(contact_instance_id_buf) + strlen(contact_reg_id_buf)
+		  + strlen(timestamp_buf) + 3 + 1;
+
+	snprintf(hash_value_buf, len, "%s;%s;%s;%s", from_buf, contact_reg_id_buf,
+			contact_instance_id_buf, timestamp_buf);
+
+	hash_value_str.s.len = strlen(hash_value_buf);
+	hash_value_str.s.s = hash_value_buf;
+
+	flow_token_str.s = flow_token_buf;
+	flow_token_str.len = strlen(flow_token_buf);
+
+	if(htable_api.set(&htable_flowtoken_name, &flow_token_str, AVP_VAL_STR,
+			   &hash_value_str, 1)
+			< 0) {
+		LM_ERR("error hashtable set\n");
+	} else {
+		LM_DBG("added flowtoken record: %s\n", hash_value_buf);
+		expires_val.n = htable_guard_time + expires;
+		if(htable_api.set_expire(&htable_flowtoken_name, &flow_token_str,
+				   AVP_NAME_STR, &expires_val)
+				< 0) {
+			LM_ERR("error hashtable set\n");
+		} else {
+			LM_DBG("expires changed to : %d\n", htable_guard_time + expires);
+			ret = 0;
+		}
+	}
+
+	free_sip_msg(&tmsg);
+
+	return ret;
 }
