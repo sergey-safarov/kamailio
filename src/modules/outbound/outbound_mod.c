@@ -167,8 +167,6 @@ static int mod_init(void)
 	}
 	default_outbound_cfg.outbound_active = 1;
 
-	sr_event_register_cb(SREV_NET_DATA_RECV, outbound_net_data_recv);
-
 	if(!module_loaded("stun")) {
 		LM_WARN("\"stun\" module is not loaded. STUN is required to use"
 				" outbound with UDP.\n");
@@ -190,6 +188,7 @@ static int mod_init(void)
 			LM_ERR("failed init flowtoken table\n");
 			return -1;
 		}
+		sr_event_register_cb(SREV_NET_DATA_RECV, outbound_net_data_recv);
 	}
 
 	return 0;
@@ -666,6 +665,9 @@ int check_flow_token(struct sip_msg *msg)
 	} else if(ret == -1) {
 		LM_DBG("failed to decode flow token\n");
 		return CHECK_FLOW_ERROR_DECODE;
+	} else if(is_flow_token_exired(&puri.user) == -1) {
+		LM_DBG("flowtoken expired\n");
+		return CHECK_FLOW_EXPIRED;
 	} else if(rcv->proto == PROTO_TCP || rcv->proto == PROTO_TLS
 			  || rcv->proto == PROTO_WS || rcv->proto == PROTO_WSS) {
 		con = tcpconn_get(0, &rcv->src_ip, rcv->src_port, NULL, 0);
@@ -676,10 +678,6 @@ int check_flow_token(struct sip_msg *msg)
 			return CHECK_FLOW_NO_TCP_CONNECTION;
 		}
 		tcpconn_put(con);
-
-		if(is_flow_token_exired(&puri.user) == -1) {
-			return CHECK_FLOW_EXPIRED;
-		}
 
 		return CHECK_FLOW_SUCCESS;
 	} else if(rcv->proto == PROTO_UDP) {
