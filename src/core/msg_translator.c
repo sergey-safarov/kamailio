@@ -879,7 +879,7 @@ static inline int lumps_len(
 			recv_address_str->s = ip_buf;
 			recv_address_str->len = strlen(ip_buf);
 			recv_af = msg->rcv.dst_ip.af;
-		} else {
+		} else if(!(ksr_tcp_accept_haproxy && msg->rcv.proto_reserved2)) {
 			recv_address_str = &(msg->rcv.bind_address->address_str);
 			recv_af = msg->rcv.bind_address->address.af;
 		}
@@ -892,7 +892,7 @@ static inline int lumps_len(
 			recv_port_str = &_recv_port_str;
 			recv_port_str->s = int2str(msg->rcv.dst_port, &recv_port_str->len);
 			recv_port_no = msg->rcv.dst_port;
-		} else {
+		} else if(!(ksr_tcp_accept_haproxy && msg->rcv.proto_reserved2)) {
 			recv_port_str = &(msg->rcv.bind_address->port_no_str);
 			recv_port_no = msg->rcv.bind_address->port_no;
 		}
@@ -1432,7 +1432,7 @@ void process_lumps(struct sip_msg *msg, struct lump *lumps, char *new_buf,
 			recv_address_str->s = ip_buf;
 			recv_address_str->len = strlen(ip_buf);
 			recv_af = msg->rcv.dst_ip.af;
-		} else {
+		} else if(!(ksr_tcp_accept_haproxy && msg->rcv.proto_reserved2)) {
 			recv_address_str = &(msg->rcv.bind_address->address_str);
 			recv_af = msg->rcv.bind_address->address.af;
 		}
@@ -1445,7 +1445,7 @@ void process_lumps(struct sip_msg *msg, struct lump *lumps, char *new_buf,
 			recv_port_str = &_recv_port_str;
 			recv_port_str->s = int2str(msg->rcv.dst_port, &recv_port_str->len);
 			recv_port_no = msg->rcv.dst_port;
-		} else {
+		} else if(!(ksr_tcp_accept_haproxy && msg->rcv.proto_reserved2)) {
 			recv_port_str = &(msg->rcv.bind_address->port_no_str);
 			recv_port_no = msg->rcv.bind_address->port_no;
 		}
